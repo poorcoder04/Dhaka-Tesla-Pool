@@ -1,0 +1,225 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ======================
+// ENUMS
+// ======================
+enum UserRole {
+  PASSENGER
+  DRIVER
+}
+
+enum PoolStatus {
+  OPEN
+  MATCHED
+  DRIVER_ARRIVED
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum RideStatus {
+  REQUESTED
+  MATCHED
+  DRIVER_ARRIVED
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+// ======================
+// MODELS
+// ======================
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String   @unique
+  role      UserRole @default(PASSENGER)
+  password  String?  // hash in production
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  vehiclesOwned   Vehicle[]        @relation("VehicleOwner")
+  rideRequests    RideRequest[]    @relation("PassengerRides")
+  poolsAsDriver   Pool[]           @relation("PoolDriver")
+  poolMemberships PoolMembership[]
+  payments        Payment[]
+
+  @@index([role])
+  @@index([phone])
+  @@map("users")
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  originPools      Pool[]        @relation("PoolOrigin")
+  destinationPools Pool[]        @relation("PoolDestination")
+  originRides      RideRequest[] @relation("RideOrigin")
+  destinationRides RideRequest[] @relation("RideDestination")
+
+  @@map("zones")
+}
+
+model Vehicle {
+  id            String   @id @default(cuid())
+  ownerId       String
+  name          String   // e.g. "Bullet"
+  model         String?
+  plateNumber   String?  @unique
+  seatCapacity  Int      // total seats available for passengers
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  owner User   @relation("VehicleOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  pools Pool[]
+
+  @@index([ownerId])
+  @@map("vehicles")
+}
+
+model Pool {
+  id              String     @id @default(cuid())
+  driverId        String
+  vehicleId       String
+  originZoneId    String
+  destinationZoneId String
+  status          PoolStatus @default(OPEN)
+  maxSeats        Int        // usually = vehicle.seatCapacity
+  availableSeats  Int
+  scheduledAt     DateTime?  // optional departure time
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  driver          User             @relation("PoolDriver", fields: [driverId], references: [id])
+  vehicle         Vehicle          @relation(fields: [vehicleId], references: [id])
+  originZone      Zone             @relation("PoolOrigin", fields: [originZoneId], references: [id])
+  destinationZone Zone             @relation("PoolDestination", fields: [destinationZoneId], references: [id])
+  memberships     PoolMembership[]
+  rideRequests    RideRequest[]
+  statusHistory   RideStatusHistory[]
+
+  @@index([status])
+  @@index([driverId])
+  @@index([originZoneId, destinationZoneId])
+  @@map("pools")
+}
+
+model RideRequest {
+  id                String     @id @default(cuid())
+  passengerId       String
+  originZoneId      String
+  destinationZoneId String
+  seatsRequested    Int        @default(1)
+  status            RideStatus @default(REQUESTED)
+  poolId            String?    // set when matched
+  requestedAt       DateTime   @default(now())
+  matchedAt         DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  passenger       User              @relation("PassengerRides", fields: [passengerId], references: [id])
+  originZone      Zone              @relation("RideOrigin", fields: [originZoneId], references: [id])
+  destinationZone Zone              @relation("RideDestination", fields: [destinationZoneId], references: [id])
+  pool            Pool?             @relation(fields: [poolId], references: [id])
+  membership      PoolMembership?
+  statusHistory   RideStatusHistory[]
+  payment         Payment?
+
+  @@index([passengerId])
+  @@index([status])
+  @@index([poolId])
+  @@map("ride_requests")
+}
+
+model PoolMembership {
+  id            String   @id @default(cuid())
+  poolId        String
+  rideRequestId String   @unique
+  userId        String   // denormalized for convenience
+  seatsTaken    Int      @default(1)
+  joinedAt      DateTime @default(now())
+
+  // Relations
+  pool        Pool        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  rideRequest RideRequest @relation(fields: [rideRequestId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@unique([poolId, userId])
+  @@index([poolId])
+  @@map("pool_memberships")
+}
+
+model RideStatusHistory {
+  id            String     @id @default(cuid())
+  rideRequestId String?
+  poolId        String?
+  status        RideStatus // or PoolStatus – we store as RideStatus for simplicity
+  note          String?
+  changedById   String?    // user who triggered the change
+  createdAt     DateTime   @default(now())
+
+  // Relations
+  rideRequest RideRequest? @relation(fields: [rideRequestId], references: [id], onDelete: Cascade)
+  pool        Pool?        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  @@index([rideRequestId])
+  @@index([poolId])
+  @@map("ride_status_history")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  rideRequestId String        @unique
+  userId        String
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  rideRequest RideRequest @relation(fields: [rideRequestId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
