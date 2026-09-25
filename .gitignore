@@ -10,6 +10,9 @@ backend/node_modules/
 frontend/.env
 backend/.env
 
+.clinerules
+clinerules
+
 # Build output
 frontend/dist/
 frontend/build/
@@ -47,3 +50,8 @@ coverage/
 # Misc
 *.tmp
 *.cache
+
+.agents/
+.claude/
+.cursor/
+.devin/

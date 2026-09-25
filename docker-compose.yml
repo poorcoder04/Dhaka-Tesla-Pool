@@ -1,0 +1,78 @@
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dhaka_tesla_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: safe_password_here
+      POSTGRES_DB: tesla_pool_db
+    ports:
+      - "5433:5432"          # host:5433 → container:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tesla_pool_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 2. Run Prisma migrations + seed (one-shot, exits when done)
+  prisma_runner:
+    image: node:22-alpine
+    container_name: dhaka_tesla_prisma
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "npm install &&
+             npx prisma migrate deploy &&
+             npx prisma db seed"
+
+  # 3. Node.js + Express Backend (TypeScript via tsx)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dhaka_tesla_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
+      JWT_SECRET: "docker_jwt_secret_change_in_prod"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prisma_runner:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dhaka_tesla_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:5000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
