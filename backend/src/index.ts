@@ -4,6 +4,7 @@ import { prisma } from "./lib/prisma.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.route.js";
+import { zoneRouter } from "./routes/zone.route.js";
 
 //  Express App 
 const app = express();
@@ -23,6 +24,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/zones", zoneRouter);
 // TODO (Step 3+): mount feature routers here, e.g.
 // app.use("/api/vehicles", vehicleRouter);
 // app.use("/api/rides", rideRequestRouter);
