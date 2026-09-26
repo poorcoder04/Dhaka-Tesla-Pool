@@ -1,19 +1,34 @@
 import { z } from "zod";
+import { createVehicleSchema } from "./vehicle.validator.js";
 
 // BD mobile numbers: 11 digits, starting 01[3-9] — matches the seed data
-// (01700000001 etc.) 
+// (01700000001 etc.)
 const phoneSchema = z
   .string()
   .trim()
   .regex(/^01[3-9]\d{8}$/, "Enter a valid Bangladeshi phone number, e.g. 01712345678");
 
-export const signupSchema = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  phone: phoneSchema,
-  email: z.string().trim().email("Enter a valid email").optional(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["PASSENGER", "DRIVER"]).default("PASSENGER"),
-});
+export const signupSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    phone: phoneSchema,
+    email: z.string().trim().email("Enter a valid email").optional(),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    role: z.enum(["PASSENGER", "DRIVER"]).default("PASSENGER"),
+    // Required only when role is DRIVER — a driver's first Tesla is created
+    // atomically with their account . Additional vehicles
+    // are added later via POST /api/vehicles.
+    vehicle: createVehicleSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === "DRIVER" && !data.vehicle) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["vehicle"],
+        message: "Vehicle details (name, seatCapacity) are required when signing up as a driver",
+      });
+    }
+  });
 
 export type SignupInput = z.infer<typeof signupSchema>;
 

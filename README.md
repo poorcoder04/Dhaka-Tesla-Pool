@@ -33,7 +33,18 @@ poysha.
 -"I receive data from outside my code → I don't trust it → Zod checks it → if valid, I use it."
 
 ### jwt token generation 
--you need vechile information for sign up as a driver
+-you need vechile information for sign up as a driver(using .superRefine())
+
+              Signup
+                │
+        ┌───────┴────────┐
+        │                │
+    PASSENGER          DRIVER
+        │                │
+ vehicle optional   vehicle REQUIRED
+                         │
+                         ↓
+                createVehicleSchema
 
 ### zod validation
 Client sends JSON
