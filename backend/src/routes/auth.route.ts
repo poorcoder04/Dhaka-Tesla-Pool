@@ -8,6 +8,6 @@ const router = Router();
 
 router.post("/signup", validate(signupSchema), signup);
 router.post("/login", validate(loginSchema), login);
-router.get("/me", authenticate, me);
+router.get("/me", authenticate, me); //give the profile
 
 export { router as authRouter };

@@ -3,6 +3,7 @@ import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { authRouter } from "./routes/auth.route.js";
 
 //  Express App 
 const app = express();
@@ -21,8 +22,8 @@ app.get("/", (_req, res) => {
   res.json({ message: "Dhaka Tesla Pool API", version: "1.0.0" });
 });
 
-// TODO (Step 2+): mount feature routers here, e.g.
-// app.use("/api/auth", authRouter);
+app.use("/api/auth", authRouter);
+// TODO (Step 3+): mount feature routers here, e.g.
 // app.use("/api/vehicles", vehicleRouter);
 // app.use("/api/rides", rideRequestRouter);
 
