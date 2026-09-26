@@ -22,5 +22,8 @@ poysha.
   minor units such as poysha to eliminate decimal arithmetic
   concerns.
 
-
+### password hasing decision 
+- bcryptjs over native bcrypt: pure JS, no node-gyp/native binary mismatch
+- risk between your host machine and the Docker container — worth the small
+- throughput cost for an MVP with no realistic login-storm scale concern.
   
