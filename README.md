@@ -33,3 +33,17 @@ poysha.
 -"I receive data from outside my code → I don't trust it → Zod checks it → if valid, I use it."
 
 ### jwt token generation 
+-you need vechile information for sign up as a driver
+
+### zod validation
+Client sends JSON
+      ↓
+Zod validation
+      ↓
+Valid? ── No → Return validation error
+      ↓ Yes
+Controller
+      ↓
+Service
+      ↓
+Database
