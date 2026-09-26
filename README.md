@@ -58,3 +58,39 @@ Controller
 Service
       ↓
 Database
+
+### flow
+Request
+   ↓
+Route
+   ↓
+Middleware
+   ↓
+Controller
+   ↓
+Service
+   ↓
+Prisma
+   ↓
+PostgreSQL
+
+### vechicle feature flow
+
+GET /vehicles/me
+       ↓
+authenticate
+       ↓
+authorize("DRIVER")
+       ↓
+listMine controller
+       ↓
+listMyVehicles service
+       ↓
+Prisma
+
+| Method | Endpoint        | Authentication | Role                   | Validation    | Controller |
+| ------ | --------------- | -------------- | ---------------------- | ------------- | ---------- |
+| GET    | `/vehicles/me`  | ✅              | DRIVER                 | —             | `listMine` |
+| POST   | `/vehicles`     | ✅              | DRIVER                 | Create schema | `create`   |
+| PATCH  | `/vehicles/:id` | ✅              | DRIVER                 | Update schema | `update`   |
+| GET    | `/vehicles/:id` | ✅              | Any authenticated user | —             | `getOne`   |
