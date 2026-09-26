@@ -14,6 +14,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   res.status(200).json({ success: true, data: result });
 }
 
+// for authentication
 export async function me(req: Request, res: Response): Promise<void> {
   if (!req.user) {
     throw new AppError("Not authenticated", 401);
