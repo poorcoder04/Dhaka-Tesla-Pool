@@ -26,4 +26,10 @@ poysha.
 - bcryptjs over native bcrypt: pure JS, no node-gyp/native binary mismatch
 - risk between your host machine and the Docker container — worth the small
 - throughput cost for an MVP with no realistic login-storm scale concern.
-  
+
+
+### input validation
+-using zod 
+-"I receive data from outside my code → I don't trust it → Zod checks it → if valid, I use it."
+
+### jwt token generation 
