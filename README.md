@@ -107,3 +107,58 @@ Prisma
 3. GET /api/vehicles/:id, (driver or passenger see the vehicle information with provide vehicle id, need :auth)
 
 4. PATCH /api/vehicles/:id (update vehicle information, need : token, vehicle data, vehicle id)
+
+# Step 4 — Ride Requests
+
+## New/changed files
+- `src/validators/rideRequest.validator.ts` — new
+- `src/utils/estimateFare.ts` — new (placeholder fare estimator, isolated for Step 7)
+- `src/services/rideRequest.service.ts` — new
+- `src/controllers/rideRequest.controller.ts` — new
+- `src/routes/rideRequest.route.ts` — new
+- `src/index.ts` — **replaces your existing file**: added the `rideRequestRouter`
+  import + `app.use("/api/rides", rideRequestRouter)` line, updated the TODO
+  comment. Nothing else changed .
+
+Everything else (schema, auth, vehicles, zones) is untouched.
+
+## Endpoints
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/rides` | PASSENGER | `{ originZoneId, destinationZoneId, seatsRequested? }` (seatsRequested defaults to 1, max 3) |
+| GET | `/api/rides/me` | PASSENGER | own history, newest first |
+| GET | `/api/rides/:id` | PASSENGER (owner only) | 403 if you don't own it |
+| PATCH | `/api/rides/:id/cancel` | PASSENGER (owner only) | 409 if status isn't still `REQUESTED` |
+
+## Decisions implemented 
+- One active (`REQUESTED`/`MATCHED`) request per passenger at a time → 409 on a second attempt.
+- `originZoneId !== destinationZoneId` enforced in the zod schema.
+- `estimateFare()` returned in the `POST /api/rides` response only — never written to `Payment`.
+- `RideStatusHistory` row written on both create and cancel.
+
+## Quick manual test (after `npm run dev`, logged in)
+```bash
+# get a token first via POST /api/auth/login, then:
+
+# list zones to grab ids
+curl http://localhost:3000/api/zones
+
+# create a request
+curl -X POST http://localhost:3000/api/rides \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"originZoneId":"<banani-id>","destinationZoneId":"<mohakhali-id>","seatsRequested":1}'
+
+# try creating a 2nd one -> expect 409
+
+# view own history
+curl http://localhost:3000/api/rides/me -H "Authorization: Bearer <TOKEN>"
+
+# cancel
+curl -X PATCH http://localhost:3000/api/rides/<id>/cancel -H "Authorization: Bearer <TOKEN>"
+```
+
+## step that are still pending
+- Driver "see relevant requests" + "accept" → Step 5, alongside `Pool` creation.
+- Real fare formula / persisted `Payment` → Step 7.
+- Any status beyond `REQUESTED`/`CANCELLED` → Step 5/6.
