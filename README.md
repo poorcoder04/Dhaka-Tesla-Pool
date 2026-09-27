@@ -94,3 +94,16 @@ Prisma
 | POST   | `/vehicles`     | ✅              | DRIVER                 | Create schema | `create`   |
 | PATCH  | `/vehicles/:id` | ✅              | DRIVER                 | Update schema | `update`   |
 | GET    | `/vehicles/:id` | ✅              | Any authenticated user | —             | `getOne`   |
+
+### API ENDPOINT:
+## zone: 
+1. GET /api/zones 
+2. GET /api/zones/:id  (public, no auth) (zones are seed only)
+## vehicle :
+1. POST /api/vehicles (create vehicle information, need authentication(token),authorization(driver), vehicle information(name, model, plateNumber, seatCapacity)) 
+
+2. GET /api/vehicles/me(for listing the vehicles of a driver. need: auth)
+
+3. GET /api/vehicles/:id, (driver or passenger see the vehicle information with provide vehicle id, need :auth)
+
+4. PATCH /api/vehicles/:id (update vehicle information, need : token, vehicle data, vehicle id)
