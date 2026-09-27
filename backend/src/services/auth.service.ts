@@ -14,25 +14,44 @@ export async function signup(input: SignupInput) {
 
   const hashed = await hashPassword(input.password);
 
-  const user = await prisma.user.create({
-    data: {
-      name: input.name,
-      phone: input.phone,
-      email: input.email,
-      role: input.role,
-      password: hashed,
-    },
+  // User + first Vehicle (if DRIVER) must succeed or fail together — no
+  // dangling driver account with no Tesla, and no orphaned vehicle.
+  const { user, vehicle } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name: input.name,
+        phone: input.phone,
+        email: input.email,
+        role: input.role,
+        password: hashed,
+      },
+    });
+
+    const vehicle =
+      input.role === "DRIVER" && input.vehicle
+        ? await tx.vehicle.create({
+            data: {
+              ownerId: user.id,
+              name: input.vehicle.name,
+              model: input.vehicle.model,
+              plateNumber: input.vehicle.plateNumber,
+              seatCapacity: input.vehicle.seatCapacity,
+            },
+          })
+        : null;
+
+    return { user, vehicle };
   });
 
   const token = signToken({ sub: user.id, role: user.role });
 
-  return { user: toSafeUser(user), token };
+  return { user: toSafeUser(user), vehicle, token };
 }
 
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { phone: input.phone } });
 
-  // Same error for "no such user" and "wrong password" 
+  // Same error for "no such user" and "wrong password"
   if (!user || !user.password) {
     throw new AppError("Invalid phone number or password", 401);
   }

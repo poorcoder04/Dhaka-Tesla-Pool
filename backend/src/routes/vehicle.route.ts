@@ -8,7 +8,7 @@ const router = Router();
 
 // Order matters: "/me" must be registered before "/:id" or Express will try
 // to treat "me" as an :id param.
-router.get("/me", authenticate, authorize("DRIVER"), listMine);
+router.get("/me", authenticate, authorize("DRIVER"), listMine); //shows the vechicle of me(driver)
 router.post("/", authenticate, authorize("DRIVER"), validate(createVehicleSchema), create);
 router.patch(
   "/:id",
