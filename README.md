@@ -6,33 +6,39 @@
 poysha.
 
 **Why:**
+
 - Keeps monetary values readable in the database.
 - Directly represents amounts such as `250.50`.
--  simple fare model.
+- simple fare model.
 
 **Alternative considered:**
+
 - Store money as integer poysha (`25050` = ৳250.50).
 
 **Trade-off:**
+
 - Decimal is more readable, but fare calculations must handle
   decimal precision and rounding consistently.
 
 **When I would reconsider:**
+
 - For a larger financial/payment system, I would consider integer
   minor units such as poysha to eliminate decimal arithmetic
   concerns.
 
-### password hasing decision 
+### password hasing decision
+
 - bcryptjs over native bcrypt: pure JS, no node-gyp/native binary mismatch
 - risk between your host machine and the Docker container — worth the small
 - throughput cost for an MVP with no realistic login-storm scale concern.
 
-
 ### input validation
--using zod 
+
+-using zod
 -"I receive data from outside my code → I don't trust it → Zod checks it → if valid, I use it."
 
-### jwt token generation 
+### jwt token generation
+
 -you need vechile information for sign up as a driver(using .superRefine())
 
               Signup
@@ -41,66 +47,73 @@ poysha.
         │                │
     PASSENGER          DRIVER
         │                │
- vehicle optional   vehicle REQUIRED
-                         │
-                         ↓
-                createVehicleSchema
+
+vehicle optional vehicle REQUIRED
+│
+↓
+createVehicleSchema
 
 ### zod validation
+
 Client sends JSON
-      ↓
+↓
 Zod validation
-      ↓
+↓
 Valid? ── No → Return validation error
-      ↓ Yes
+↓ Yes
 Controller
-      ↓
+↓
 Service
-      ↓
+↓
 Database
 
 ### flow
+
 Request
-   ↓
+↓
 Route
-   ↓
+↓
 Middleware
-   ↓
+↓
 Controller
-   ↓
+↓
 Service
-   ↓
+↓
 Prisma
-   ↓
+↓
 PostgreSQL
 
 ### vechicle feature flow
 
 GET /vehicles/me
-       ↓
+↓
 authenticate
-       ↓
+↓
 authorize("DRIVER")
-       ↓
+↓
 listMine controller
-       ↓
+↓
 listMyVehicles service
-       ↓
+↓
 Prisma
 
 | Method | Endpoint        | Authentication | Role                   | Validation    | Controller |
 | ------ | --------------- | -------------- | ---------------------- | ------------- | ---------- |
-| GET    | `/vehicles/me`  | ✅              | DRIVER                 | —             | `listMine` |
-| POST   | `/vehicles`     | ✅              | DRIVER                 | Create schema | `create`   |
-| PATCH  | `/vehicles/:id` | ✅              | DRIVER                 | Update schema | `update`   |
-| GET    | `/vehicles/:id` | ✅              | Any authenticated user | —             | `getOne`   |
+| GET    | `/vehicles/me`  | ✅             | DRIVER                 | —             | `listMine` |
+| POST   | `/vehicles`     | ✅             | DRIVER                 | Create schema | `create`   |
+| PATCH  | `/vehicles/:id` | ✅             | DRIVER                 | Update schema | `update`   |
+| GET    | `/vehicles/:id` | ✅             | Any authenticated user | —             | `getOne`   |
 
 ### API ENDPOINT:
-## zone: 
-1. GET /api/zones 
-2. GET /api/zones/:id  (public, no auth) (zones are seed only)
+
+## zone:
+
+1. GET /api/zones
+2. GET /api/zones/:id (public, no auth) (zones are seed only)
+
 ## vehicle :
-1. POST /api/vehicles (create vehicle information, need authentication(token),authorization(driver), vehicle information(name, model, plateNumber, seatCapacity)) 
+
+1. POST /api/vehicles (create vehicle information, need authentication(token),authorization(driver), vehicle information(name, model, plateNumber, seatCapacity))
 
 2. GET /api/vehicles/me(for listing the vehicles of a driver. need: auth)
 
@@ -111,6 +124,7 @@ Prisma
 # Step 4 — Ride Requests
 
 ## New/changed files
+
 - `src/validators/rideRequest.validator.ts` — new
 - `src/utils/estimateFare.ts` — new (placeholder fare estimator, isolated for Step 7)
 - `src/services/rideRequest.service.ts` — new
@@ -123,20 +137,23 @@ Prisma
 Everything else (schema, auth, vehicles, zones) is untouched.
 
 ## Endpoints
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| POST | `/api/rides` | PASSENGER | `{ originZoneId, destinationZoneId, seatsRequested? }` (seatsRequested defaults to 1, max 3) |
-| GET | `/api/rides/me` | PASSENGER | own history, newest first |
-| GET | `/api/rides/:id` | PASSENGER (owner only) | 403 if you don't own it |
-| PATCH | `/api/rides/:id/cancel` | PASSENGER (owner only) | 409 if status isn't still `REQUESTED` |
 
-## Decisions implemented 
+| Method | Path                    | Auth                   | Notes                                                                                        |
+| ------ | ----------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
+| POST   | `/api/rides`            | PASSENGER              | `{ originZoneId, destinationZoneId, seatsRequested? }` (seatsRequested defaults to 1, max 3) |
+| GET    | `/api/rides/me`         | PASSENGER              | own history, newest first                                                                    |
+| GET    | `/api/rides/:id`        | PASSENGER (owner only) | 403 if you don't own it                                                                      |
+| PATCH  | `/api/rides/:id/cancel` | PASSENGER (owner only) | 409 if status isn't still `REQUESTED`                                                        |
+
+## Decisions implemented
+
 - One active (`REQUESTED`/`MATCHED`) request per passenger at a time → 409 on a second attempt.
 - `originZoneId !== destinationZoneId` enforced in the zod schema.
 - `estimateFare()` returned in the `POST /api/rides` response only — never written to `Payment`.
 - `RideStatusHistory` row written on both create and cancel.
 
 ## Quick manual test (after `npm run dev`, logged in)
+
 ```bash
 # get a token first via POST /api/auth/login, then:
 
@@ -159,6 +176,7 @@ curl -X PATCH http://localhost:3000/api/rides/<id>/cancel -H "Authorization: Bea
 ```
 
 ## step that are still pending
+
 - Driver "see relevant requests" + "accept" → Step 5, alongside `Pool` creation.
 - Real fare formula / persisted `Payment` → Step 7.
 - Any status beyond `REQUESTED`/`CANCELLED` → Step 5/6.
@@ -172,34 +190,88 @@ curl -X PATCH http://localhost:3000/api/rides/<id>/cancel -H "Authorization: Bea
 | `GET /pools/me/active`    | Driver    | **Show me my current trip/pool**  |
 | `PATCH /rides/:id/cancel` | Passenger | **I want to cancel my ride**      |
 
+### flow diagram:
 
-### flow diagram: 
 Passenger creates ride
-        ↓
-   REQUESTED
-        ↓
+↓
+REQUESTED
+↓
 GET /api/rides/open
-        ↑
- Driver sees available passengers
-        ↓
+↑
+Driver sees available passengers
+↓
 POST /api/rides/:id/accept
-        ↓
-   REQUESTED → MATCHED
-        ↓
- Passenger joins driver's Pool
-        ↓
+↓
+REQUESTED → MATCHED
+↓
+Passenger joins driver's Pool
+↓
 GET /api/pools/me/active
-        ↓
- Driver sees:
- vehicle
- passengers
- seats
- zones
-        ↓
- Passenger changes mind?
-        ↓
+↓
+Driver sees:
+vehicle
+passengers
+seats
+zones
+↓
+Passenger changes mind?
+↓
 PATCH /api/rides/:id/cancel
-        ↓
- MATCHED → CANCELLED
-        ↓
- seat returned to Pool
+↓
+MATCHED → CANCELLED
+↓
+seat returned to Pool
+
+## Step 6 — Driver Flow & Pool Lifecycle
+
+Step 6 adds the driver's trip controls, online/offline status, lifecycle
+transitions, and status history for pools and ride requests.
+
+### Driver endpoints
+
+| Method | Path                      | Meaning                                |
+| ------ | ------------------------- | -------------------------------------- |
+| PATCH  | `/api/drivers/me/status`  | Go online or offline                   |
+| GET    | `/api/pools/me/active`    | View the active trip and passengers    |
+| GET    | `/api/pools/me/history`   | View completed and cancelled trips     |
+| GET    | `/api/pools/:id`          | View one owned trip and all passengers |
+| GET    | `/api/pools/:id/history`  | View the trip status timeline          |
+| POST   | `/api/pools/:id/arrive`   | Mark the driver as arrived             |
+| POST   | `/api/pools/:id/start`    | Start the trip                         |
+| POST   | `/api/pools/:id/complete` | Complete the trip                      |
+| POST   | `/api/pools/:id/cancel`   | Cancel before the trip starts          |
+
+### Passenger history endpoint
+
+| Method | Path                     | Meaning                                |
+| ------ | ------------------------ | -------------------------------------- |
+| GET    | `/api/rides/:id/history` | View the passenger's own ride timeline |
+
+### Lifecycle rules
+
+- Pool: `OPEN → DRIVER_ARRIVED → STARTED → COMPLETED`
+- Pool cancellation is allowed from `OPEN` or `DRIVER_ARRIVED`.
+- Ride: `REQUESTED → MATCHED → DRIVER_ARRIVED → STARTED → COMPLETED`
+- Passengers may cancel before `STARTED`.
+- Driver actions update the pool and all active passengers in one transaction.
+- Only online drivers can accept ride requests, and drivers cannot go offline during an active trip.
+
+### Step 6 validation
+
+```bash
+npm test
+```
+
+### api endpoint summary table for step-06
+| Method  | Endpoint                  | Who       | Purpose                   |
+| ------- | ------------------------- | --------- | ------------------------- |
+| `PATCH` | `/api/drivers/me/status`  | Driver    | Go **online/offline**     |
+| `GET`   | `/api/pools/active`       | Driver    | Get driver's active pool  |
+| `GET`   | `/api/pools/:id`          | Driver    | Get pool details          |
+| `GET`   | `/api/pools/history`      | Driver    | Get driver's pool history |
+| `GET`   | `/api/pools/:id/timeline` | Driver    | Get pool/ride timeline    |
+| `POST`  | `/api/pools/:id/arrive`   | Driver    | Mark driver as arrived    |
+| `POST`  | `/api/pools/:id/start`    | Driver    | Start the trip            |
+| `POST`  | `/api/pools/:id/complete` | Driver    | Complete the trip         |
+| `POST`  | `/api/pools/:id/cancel`   | Driver    | Cancel the pool/trip      |
+| `GET`   | `/api/rides/:id/history`  | Passenger | Get ride request history  |
