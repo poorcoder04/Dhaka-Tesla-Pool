@@ -11,3 +11,13 @@ export const acceptRideRequestSchema = z.object({
 });
 
 export type AcceptRideRequestInput = z.infer<typeof acceptRideRequestSchema>;
+
+// Optional free-text reason a driver can attach when cancelling a trip; it is
+// stored in the status history so the passengers' timeline can explain it.
+export const cancelTripSchema = z
+  .object({
+    reason: z.string().trim().min(1).max(200).optional(),
+  })
+  .default({});
+
+export type CancelTripInput = z.infer<typeof cancelTripSchema>;

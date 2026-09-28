@@ -1,12 +1,15 @@
 import type { Request, Response } from "express";
-import * as rideRequestService from "../services/rideRequest.service.js";
 import * as poolService from "../services/pool.service.js";
+import * as rideRequestService from "../services/rideRequest.service.js";
 import { AppError } from "../utils/AppError.js";
 
 export async function create(req: Request, res: Response): Promise<void> {
   if (!req.user) throw new AppError("Authentication required", 401);
 
-  const rideRequest = await rideRequestService.createRideRequest(req.user.id, req.body);
+  const rideRequest = await rideRequestService.createRideRequest(
+    req.user.id,
+    req.body,
+  );
   res.status(201).json({ success: true, data: rideRequest });
 }
 
@@ -29,9 +32,19 @@ export async function getOne(req: Request, res: Response): Promise<void> {
 
   const rideRequest = await rideRequestService.getRideRequestById(
     req.params.id as string,
-    req.user.id
+    req.user.id,
   );
   res.status(200).json({ success: true, data: rideRequest });
+}
+
+export async function getHistory(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw new AppError("Authentication required", 401);
+
+  const history = await rideRequestService.getRideRequestHistory(
+    req.params.id as string,
+    req.user.id,
+  );
+  res.status(200).json({ success: true, data: history });
 }
 
 export async function cancel(req: Request, res: Response): Promise<void> {
@@ -39,7 +52,7 @@ export async function cancel(req: Request, res: Response): Promise<void> {
 
   const rideRequest = await rideRequestService.cancelRideRequest(
     req.params.id as string,
-    req.user.id
+    req.user.id,
   );
   res.status(200).json({ success: true, data: rideRequest });
 }
@@ -52,7 +65,7 @@ export async function accept(req: Request, res: Response): Promise<void> {
   const result = await poolService.acceptRideRequest(
     req.user.id,
     req.params.id as string,
-    vehicleId
+    vehicleId,
   );
   res.status(200).json({ success: true, data: result });
 }
