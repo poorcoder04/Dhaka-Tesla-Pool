@@ -162,3 +162,44 @@ curl -X PATCH http://localhost:3000/api/rides/<id>/cancel -H "Authorization: Bea
 - Driver "see relevant requests" + "accept" → Step 5, alongside `Pool` creation.
 - Real fare formula / persisted `Payment` → Step 7.
 - Any status beyond `REQUESTED`/`CANCELLED` → Step 5/6.
+
+### step-5: pool matching engine
+
+| API                       | Who       | Simple meaning                    |
+| ------------------------- | --------- | --------------------------------- |
+| `GET /rides/open`         | Driver    | **Show me passengers waiting**    |
+| `POST /rides/:id/accept`  | Driver    | **I want to take this passenger** |
+| `GET /pools/me/active`    | Driver    | **Show me my current trip/pool**  |
+| `PATCH /rides/:id/cancel` | Passenger | **I want to cancel my ride**      |
+
+
+### flow diagram: 
+Passenger creates ride
+        ↓
+   REQUESTED
+        ↓
+GET /api/rides/open
+        ↑
+ Driver sees available passengers
+        ↓
+POST /api/rides/:id/accept
+        ↓
+   REQUESTED → MATCHED
+        ↓
+ Passenger joins driver's Pool
+        ↓
+GET /api/pools/me/active
+        ↓
+ Driver sees:
+ vehicle
+ passengers
+ seats
+ zones
+        ↓
+ Passenger changes mind?
+        ↓
+PATCH /api/rides/:id/cancel
+        ↓
+ MATCHED → CANCELLED
+        ↓
+ seat returned to Pool
