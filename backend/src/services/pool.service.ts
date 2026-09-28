@@ -2,14 +2,12 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import { sameCluster } from "../config/zoneClusters.js";
 import { PoolStatus, RideStatus } from "../../generated/prisma/client.js";
-
-// A driver may only run one trip at a time (one Tesla, one route).
-const ACTIVE_POOL_STATUSES: PoolStatus[] = [
-  PoolStatus.OPEN,
-  PoolStatus.MATCHED,
-  PoolStatus.DRIVER_ARRIVED,
-  PoolStatus.STARTED,
-];
+import {
+  ACTIVE_POOL_STATUSES,
+  livePoolInclude,
+  poolInclude,
+  withSeatSummary,
+} from "./poolShared.js";
 
 // Narrow local shapes — just the fields these helpers actually touch,
 // rather than pulling in the full generated Prisma payload types.
@@ -28,15 +26,6 @@ interface VehicleForMatching {
   seatCapacity: number;
 }
 
-const poolInclude = {
-  vehicle: true,
-  originZone: true,
-  destinationZone: true,
-  memberships: {
-    include: { user: { select: { id: true, name: true, phone: true } } },
-  },
-} as const;
-
 /**
  * The Step 5 matching engine. A driver accepts a specific ride request:
  *  - if they have no active pool, this request starts a brand new one
@@ -50,6 +39,16 @@ export async function acceptRideRequest(
   rideRequestId: string,
   vehicleId: string | undefined
 ) {
+  // PRD driver column: "go online/offline" — only online drivers take rides.
+  const driver = await prisma.user.findUnique({
+    where: { id: driverId },
+    select: { isOnline: true },
+  });
+
+  if (!driver?.isOnline) {
+    throw new AppError("Go online before accepting rides", 409);
+  }
+
   const rideRequest = await prisma.rideRequest.findUnique({
     where: { id: rideRequestId },
     include: { originZone: true, destinationZone: true },
@@ -139,11 +138,7 @@ async function createPoolAndJoin(
       },
     });
 
-    const updatedRideRequest = await tx.rideRequest.update({
-      where: { id: rideRequest.id },
-      data: { status: RideStatus.MATCHED, poolId: pool.id, matchedAt: new Date() },
-      include: { originZone: true, destinationZone: true },
-    });
+    const updatedRideRequest = await matchRideRequest(tx, rideRequest.id, pool.id);
 
     await tx.rideStatusHistory.create({
       data: {
@@ -161,6 +156,27 @@ async function createPoolAndJoin(
     });
 
     return { rideRequest: updatedRideRequest, pool: fullPool };
+  });
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+// REQUESTED -> MATCHED as a conditional update. If the passenger cancelled
+// (or another driver accepted) between our read and this write, 0 rows match
+// and the whole transaction rolls back instead of resurrecting the request.
+async function matchRideRequest(tx: Tx, rideRequestId: string, poolId: string) {
+  const result = await tx.rideRequest.updateMany({
+    where: { id: rideRequestId, status: RideStatus.REQUESTED },
+    data: { status: RideStatus.MATCHED, poolId, matchedAt: new Date() },
+  });
+
+  if (result.count === 0) {
+    throw new AppError("This ride request is no longer available", 409);
+  }
+
+  return tx.rideRequest.findUniqueOrThrow({
+    where: { id: rideRequestId },
+    include: { originZone: true, destinationZone: true },
   });
 }
 
@@ -201,11 +217,7 @@ async function joinExistingPool(
       },
     });
 
-    const updatedRideRequest = await tx.rideRequest.update({
-      where: { id: rideRequest.id },
-      data: { status: RideStatus.MATCHED, poolId, matchedAt: new Date() },
-      include: { originZone: true, destinationZone: true },
-    });
+    const updatedRideRequest = await matchRideRequest(tx, rideRequest.id, poolId);
 
     await tx.rideStatusHistory.create({
       data: {
@@ -227,15 +239,14 @@ async function joinExistingPool(
 }
 
 /**
- * The driver's current in-progress trip (any status from OPEN through
- * STARTED), with its passengers and seat counts — the "See passengers/
- * seats" part of the PRD's driver column. Past/completed trips (driver
- * "ride history") are Step 6, once COMPLETED is a reachable status.
+ * The driver's current in-progress trip (OPEN through STARTED) with the
+ * passengers still in the Tesla and the seat counts — the "See
+ * passengers/seats" part of the PRD's driver column.
  */
 export async function getActivePoolForDriver(driverId: string) {
   const pool = await prisma.pool.findFirst({
     where: { driverId, status: { in: ACTIVE_POOL_STATUSES } },
-    include: poolInclude,
+    include: livePoolInclude,
     orderBy: { createdAt: "desc" },
   });
 
@@ -243,5 +254,68 @@ export async function getActivePoolForDriver(driverId: string) {
     throw new AppError("You have no active trip right now", 404);
   }
 
+  return withSeatSummary(pool);
+}
+
+export async function findOwnedPool(poolId: string, driverId: string) {
+  const pool = await prisma.pool.findUnique({ where: { id: poolId } });
+
+  if (!pool) {
+    throw new AppError("Trip not found", 404);
+  }
+
+  if (pool.driverId !== driverId) {
+    throw new AppError("You do not own this trip", 403);
+  }
+
   return pool;
+}
+
+/** One of the driver's own trips, with every passenger it ever had and their ride status. */
+export async function getPoolForDriver(poolId: string, driverId: string) {
+  await findOwnedPool(poolId, driverId);
+
+  const pool = await prisma.pool.findUniqueOrThrow({
+    where: { id: poolId },
+    include: poolInclude,
+  });
+
+  return withSeatSummary(pool);
+}
+
+/**
+ * The driver's "ride history": finished trips (COMPLETED or CANCELLED),
+ * newest first. Capped at 50 — pagination is a documented next step.
+ */
+export async function listPoolHistoryForDriver(driverId: string) {
+  const pools = await prisma.pool.findMany({
+    where: { driverId, status: { in: [PoolStatus.COMPLETED, PoolStatus.CANCELLED] } },
+    include: poolInclude,
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  return pools.map(withSeatSummary);
+}
+
+/**
+ * Full audit timeline of one trip: the pool's own status changes plus every
+ * passenger's, oldest first — enough to "explain exactly what happened".
+ */
+export async function getPoolTimeline(poolId: string, driverId: string) {
+  await findOwnedPool(poolId, driverId);
+
+  return prisma.rideStatusHistory.findMany({
+    where: { poolId },
+    select: {
+      id: true,
+      rideRequestId: true,
+      status: true,
+      note: true,
+      changedById: true,
+      createdAt: true,
+      rideRequest: { select: { passenger: { select: { id: true, name: true } } } },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
 }
