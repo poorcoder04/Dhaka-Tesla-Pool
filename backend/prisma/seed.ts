@@ -11,6 +11,11 @@ async function main() {
   console.log("🌱 Starting seed...");
 
   // 1. Zones
+  // PRD Section 4 names Banani, Gulshan, Mohakhali, Dhanmondi, Mirpur,
+  // Uttara, Farmgate, Bashundhara explicitly ("...etc"); Badda, Baridhara,
+  // Tejgaon, Rampura and Motijheel are added for a richer demo. All 13 are
+  // grouped into clusters in src/config/zoneClusters.ts (the Step 5
+  // matching rule).
   const zoneNames = [
     "Banani",
     "Gulshan 1",
@@ -18,6 +23,13 @@ async function main() {
     "Dhanmondi",
     "Mirpur",
     "Uttara",
+    "Farmgate",
+    "Bashundhara",
+    "Badda",
+    "Baridhara",
+    "Tejgaon",
+    "Rampura",
+    "Motijheel",
   ];
 
   const zones = await Promise.all(
@@ -109,3 +121,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
