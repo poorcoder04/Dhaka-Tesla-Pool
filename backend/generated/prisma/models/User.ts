@@ -32,6 +32,7 @@ export type UserMinAggregateOutputType = {
   role: $Enums.UserRole | null
   password: string | null
   isActive: boolean | null
+  isOnline: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -44,6 +45,7 @@ export type UserMaxAggregateOutputType = {
   role: $Enums.UserRole | null
   password: string | null
   isActive: boolean | null
+  isOnline: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -56,6 +58,7 @@ export type UserCountAggregateOutputType = {
   role: number
   password: number
   isActive: number
+  isOnline: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -70,6 +73,7 @@ export type UserMinAggregateInputType = {
   role?: true
   password?: true
   isActive?: true
+  isOnline?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -82,6 +86,7 @@ export type UserMaxAggregateInputType = {
   role?: true
   password?: true
   isActive?: true
+  isOnline?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -94,6 +99,7 @@ export type UserCountAggregateInputType = {
   role?: true
   password?: true
   isActive?: true
+  isOnline?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -179,6 +185,7 @@ export type UserGroupByOutputType = {
   role: $Enums.UserRole
   password: string | null
   isActive: boolean
+  isOnline: boolean
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -212,6 +219,7 @@ export type UserWhereInput = {
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
+  isOnline?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   vehiclesOwned?: Prisma.VehicleListRelationFilter
@@ -229,6 +237,7 @@ export type UserOrderByWithRelationInput = {
   role?: Prisma.SortOrder
   password?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   vehiclesOwned?: Prisma.VehicleOrderByRelationAggregateInput
@@ -249,6 +258,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
+  isOnline?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   vehiclesOwned?: Prisma.VehicleListRelationFilter
@@ -266,6 +276,7 @@ export type UserOrderByWithAggregationInput = {
   role?: Prisma.SortOrder
   password?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -284,6 +295,7 @@ export type UserScalarWhereWithAggregatesInput = {
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  isOnline?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -296,6 +308,7 @@ export type UserCreateInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleCreateNestedManyWithoutOwnerInput
@@ -313,6 +326,7 @@ export type UserUncheckedCreateInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedCreateNestedManyWithoutOwnerInput
@@ -330,6 +344,7 @@ export type UserUpdateInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUpdateManyWithoutOwnerNestedInput
@@ -347,6 +362,7 @@ export type UserUncheckedUpdateInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -364,6 +380,7 @@ export type UserCreateManyInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -376,6 +393,7 @@ export type UserUpdateManyMutationInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -388,6 +406,7 @@ export type UserUncheckedUpdateManyInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -400,6 +419,7 @@ export type UserCountOrderByAggregateInput = {
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -412,6 +432,7 @@ export type UserMaxOrderByAggregateInput = {
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -424,6 +445,7 @@ export type UserMinOrderByAggregateInput = {
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -531,6 +553,7 @@ export type UserCreateWithoutVehiclesOwnedInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   rideRequests?: Prisma.RideRequestCreateNestedManyWithoutPassengerInput
@@ -547,6 +570,7 @@ export type UserUncheckedCreateWithoutVehiclesOwnedInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   rideRequests?: Prisma.RideRequestUncheckedCreateNestedManyWithoutPassengerInput
@@ -579,6 +603,7 @@ export type UserUpdateWithoutVehiclesOwnedInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rideRequests?: Prisma.RideRequestUpdateManyWithoutPassengerNestedInput
@@ -595,6 +620,7 @@ export type UserUncheckedUpdateWithoutVehiclesOwnedInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   rideRequests?: Prisma.RideRequestUncheckedUpdateManyWithoutPassengerNestedInput
@@ -611,6 +637,7 @@ export type UserCreateWithoutPoolsAsDriverInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleCreateNestedManyWithoutOwnerInput
@@ -627,6 +654,7 @@ export type UserUncheckedCreateWithoutPoolsAsDriverInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedCreateNestedManyWithoutOwnerInput
@@ -659,6 +687,7 @@ export type UserUpdateWithoutPoolsAsDriverInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUpdateManyWithoutOwnerNestedInput
@@ -675,6 +704,7 @@ export type UserUncheckedUpdateWithoutPoolsAsDriverInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -691,6 +721,7 @@ export type UserCreateWithoutRideRequestsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleCreateNestedManyWithoutOwnerInput
@@ -707,6 +738,7 @@ export type UserUncheckedCreateWithoutRideRequestsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedCreateNestedManyWithoutOwnerInput
@@ -739,6 +771,7 @@ export type UserUpdateWithoutRideRequestsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUpdateManyWithoutOwnerNestedInput
@@ -755,6 +788,7 @@ export type UserUncheckedUpdateWithoutRideRequestsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -771,6 +805,7 @@ export type UserCreateWithoutPoolMembershipsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleCreateNestedManyWithoutOwnerInput
@@ -787,6 +822,7 @@ export type UserUncheckedCreateWithoutPoolMembershipsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedCreateNestedManyWithoutOwnerInput
@@ -819,6 +855,7 @@ export type UserUpdateWithoutPoolMembershipsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUpdateManyWithoutOwnerNestedInput
@@ -835,6 +872,7 @@ export type UserUncheckedUpdateWithoutPoolMembershipsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -851,6 +889,7 @@ export type UserCreateWithoutPaymentsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleCreateNestedManyWithoutOwnerInput
@@ -867,6 +906,7 @@ export type UserUncheckedCreateWithoutPaymentsInput = {
   role?: $Enums.UserRole
   password?: string | null
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedCreateNestedManyWithoutOwnerInput
@@ -899,6 +939,7 @@ export type UserUpdateWithoutPaymentsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUpdateManyWithoutOwnerNestedInput
@@ -915,6 +956,7 @@ export type UserUncheckedUpdateWithoutPaymentsInput = {
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vehiclesOwned?: Prisma.VehicleUncheckedUpdateManyWithoutOwnerNestedInput
@@ -998,6 +1040,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   role?: boolean
   password?: boolean
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   vehiclesOwned?: boolean | Prisma.User$vehiclesOwnedArgs<ExtArgs>
@@ -1016,6 +1059,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   role?: boolean
   password?: boolean
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1028,6 +1072,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   role?: boolean
   password?: boolean
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1040,11 +1085,12 @@ export type UserSelectScalar = {
   role?: boolean
   password?: boolean
   isActive?: boolean
+  isOnline?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "password" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "password" | "isActive" | "isOnline" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   vehiclesOwned?: boolean | Prisma.User$vehiclesOwnedArgs<ExtArgs>
   rideRequests?: boolean | Prisma.User$rideRequestsArgs<ExtArgs>
@@ -1073,6 +1119,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     role: $Enums.UserRole
     password: string | null
     isActive: boolean
+    isOnline: boolean
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1510,6 +1557,7 @@ export interface UserFieldRefs {
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
   readonly password: Prisma.FieldRef<"User", 'String'>
   readonly isActive: Prisma.FieldRef<"User", 'Boolean'>
+  readonly isOnline: Prisma.FieldRef<"User", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }
