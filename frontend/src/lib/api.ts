@@ -83,6 +83,14 @@ export interface RideHistoryEntry {
   createdAt: string;
 }
 
+export interface RidePayment {
+  amount: number | string;
+  method: PaymentMethod;
+  status: "PENDING" | "PAID" | "FAILED";
+  paidAt: string | null;
+  transactionId: string | null;
+}
+
 export interface SignupInput {
   name: string;
   phone: string;
@@ -252,6 +260,14 @@ export function cancelRideRequest(token: string, rideRequestId: string) {
   return request<PassengerRide>(
     `/api/rides/${encodeURIComponent(rideRequestId)}/cancel`,
     { method: "PATCH" },
+    token,
+  );
+}
+
+export function getRidePayment(token: string, rideRequestId: string) {
+  return request<RidePayment>(
+    `/api/payments/ride/${encodeURIComponent(rideRequestId)}`,
+    {},
     token,
   );
 }

@@ -1,17 +1,20 @@
 "use client";
 
 import {
+  ApiError,
   cancelRideRequest,
   createRideRequest,
   estimateRideFare,
   getRideRequest,
   getRideRequestHistory,
+  getRidePayment,
   getMyRideRequests,
   getZones,
   type FareEstimate,
   type PaymentMethod,
   type PassengerRide,
   type PassengerRideDetails,
+  type RidePayment,
   type RideHistoryEntry,
   type RideRequestResult,
   type RideStatus,
@@ -780,6 +783,7 @@ export default function RideRequestPanel({
           )}
         </>
       )}
+      <RideHistoryList token={token} rides={passengerRides} />
     </section>
   );
 }
@@ -802,5 +806,187 @@ function FareOption({
       )}
       {fare.poolDiscountPercentage === 0 && <small>Standard estimate</small>}
     </div>
+  );
+}
+
+function RideHistoryList({
+  token,
+  rides,
+}: {
+  token: string;
+  rides: PassengerRide[];
+}) {
+  const historyRides = rides.filter(
+    (ride) => ride.status === "COMPLETED" || ride.status === "CANCELLED",
+  );
+  const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
+  const [loadingRideId, setLoadingRideId] = useState<string | null>(null);
+  const [loadedHistory, setLoadedHistory] = useState<{
+    rideId: string;
+    entries: RideHistoryEntry[];
+    payment: RidePayment | null;
+  } | null>(null);
+  const [loadError, setLoadError] = useState<{
+    rideId: string;
+    message: string;
+  } | null>(null);
+  const requestSequence = useRef(0);
+
+  async function toggleRideActivity(ride: PassengerRide) {
+    if (expandedRideId === ride.id) {
+      requestSequence.current += 1;
+      setExpandedRideId(null);
+      setLoadingRideId(null);
+      return;
+    }
+
+    const sequence = ++requestSequence.current;
+    setExpandedRideId(ride.id);
+    setLoadingRideId(ride.id);
+    setLoadError(null);
+
+    try {
+      const [entries, payment] = await Promise.all([
+        getRideRequestHistory(token, ride.id),
+        ride.status === "COMPLETED"
+          ? getRidePayment(token, ride.id).catch((error: unknown) => {
+              if (error instanceof ApiError && error.status === 404) return null;
+              throw error;
+            })
+          : Promise.resolve(null),
+      ]);
+
+      if (requestSequence.current === sequence) {
+        setLoadedHistory({ rideId: ride.id, entries, payment });
+      }
+    } catch (error) {
+      if (requestSequence.current === sequence) {
+        setLoadError({
+          rideId: ride.id,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not load this ride's history.",
+        });
+      }
+    } finally {
+      if (requestSequence.current === sequence) setLoadingRideId(null);
+    }
+  }
+
+  return (
+    <section className="passenger-history" aria-labelledby="ride-history-heading">
+      <div className="passenger-history-heading">
+        <div>
+          <p className="eyebrow">PASSENGER / PAST RIDES</p>
+          <h2 id="ride-history-heading">Ride history</h2>
+        </div>
+        <span>{historyRides.length} rides</span>
+      </div>
+
+      {historyRides.length === 0 ? (
+        <p className="history-empty">
+          Completed and cancelled rides will appear here.
+        </p>
+      ) : (
+        <ul className="passenger-history-list">
+          {historyRides.map((ride) => {
+            const isExpanded = expandedRideId === ride.id;
+            const rideHistory =
+              loadedHistory?.rideId === ride.id ? loadedHistory : null;
+            const rideError = loadError?.rideId === ride.id ? loadError : null;
+
+            return (
+              <li className="history-ride" key={ride.id}>
+                <button
+                  className="history-ride-toggle"
+                  type="button"
+                  aria-expanded={isExpanded}
+                  onClick={() => void toggleRideActivity(ride)}
+                >
+                  <span className="history-route">
+                    <strong>
+                      {ride.originZone.name} <i /> {ride.destinationZone.name}
+                    </strong>
+                    <small>
+                      {new Intl.DateTimeFormat("en-BD", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(new Date(ride.requestedAt))}
+                      {` / ${ride.seatsRequested} ${ride.seatsRequested === 1 ? "seat" : "seats"}`}
+                    </small>
+                  </span>
+                  <span
+                    className={`history-status history-status-${ride.status.toLowerCase()}`}
+                  >
+                    {ride.status.replaceAll("_", " ")}
+                  </span>
+                  <span className="history-toggle-label">
+                    {isExpanded ? "Hide activity" : "View activity"}
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="history-ride-details">
+                    {loadingRideId === ride.id && (
+                      <p className="history-loading" aria-live="polite">
+                        Loading ride activity...
+                      </p>
+                    )}
+                    {rideError && (
+                      <p className="ride-inline-error" role="alert">
+                        {rideError.message}
+                      </p>
+                    )}
+                    {rideHistory && (
+                      <>
+                        <ol className="ride-timeline">
+                          {rideHistory.entries.map((entry, index) => (
+                            <li className="ride-timeline-entry" key={entry.id}>
+                              <span
+                                className={`timeline-marker${index === rideHistory.entries.length - 1 ? " timeline-marker-current" : ""}`}
+                                aria-hidden="true"
+                              />
+                              <div className="timeline-entry-content">
+                                <div className="timeline-entry-heading">
+                                  <strong>{entry.status.replaceAll("_", " ")}</strong>
+                                  <time dateTime={entry.createdAt}>
+                                    {new Intl.DateTimeFormat("en-BD", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    }).format(new Date(entry.createdAt))}
+                                  </time>
+                                </div>
+                                {entry.note && <p>{entry.note}</p>}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                        {ride.status === "COMPLETED" && (
+                          <p className="history-payment">
+                            {rideHistory.payment ? (
+                              <>
+                                Final fare: {formatMoney(Number(rideHistory.payment.amount))}
+                                {` / ${rideHistory.payment.method === "CASH" ? "Cash" : "TeslaPay"}`}
+                                {` / ${rideHistory.payment.status}`}
+                              </>
+                            ) : (
+                              "Final fare record is not available."
+                            )}
+                          </p>
+                        )}
+                        {ride.status === "CANCELLED" && (
+                          <p className="history-payment">No payment was collected for this cancelled ride.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
