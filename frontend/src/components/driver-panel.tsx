@@ -15,6 +15,7 @@ import {
   getPoolTimeline,
   setDriverStatus,
   startTrip,
+  errorText,
   type ActivePool,
   type DriverPayment,
   type LifecyclePool,
@@ -48,7 +49,7 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// â”€â”€ Status badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StatusBadge({ status }: { status: string }) {
   const label = status.replaceAll("_", " ");
@@ -64,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`driver-badge ${cls}`}>{label}</span>;
 }
 
-// ── Payment status chip ───────────────────────────────────────────────────────
+// â”€â”€ Payment status chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PaymentChip({ status }: { status: "PENDING" | "PAID" | "FAILED" }) {
   const cls =
@@ -74,7 +75,7 @@ function PaymentChip({ status }: { status: "PENDING" | "PAID" | "FAILED" }) {
   return <span className={`payment-chip ${cls}`}>{status}</span>;
 }
 
-// ── Online toggle ─────────────────────────────────────────────────────────────
+// â”€â”€ Online toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OnlineToggleProps {
   token: string;
@@ -93,7 +94,7 @@ function OnlineToggle({ token, isOnline, onChange }: OnlineToggleProps) {
       const result = await setDriverStatus(token, !isOnline);
       onChange(result.isOnline);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update your status.");
+      setError(errorText(err, "Could not update your status."));
     } finally {
       setIsToggling(false);
     }
@@ -129,7 +130,7 @@ function OnlineToggle({ token, isOnline, onChange }: OnlineToggleProps) {
   );
 }
 
-// ── Accept modal ──────────────────────────────────────────────────────────────
+// â”€â”€ Accept modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AcceptModalProps {
   token: string;
@@ -153,7 +154,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
       const result = await acceptRideRequest(token, ride.id, selectedVehicleId);
       onAccepted(result.pool);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not accept this ride.");
+      setError(errorText(err, "Could not accept this ride."));
     } finally {
       setIsSubmitting(false);
     }
@@ -165,9 +166,9 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
         <div className="driver-modal-header">
           <div>
             <p className="eyebrow">ACCEPT RIDE REQUEST</p>
-            <h2 id="accept-modal-heading">{ride.originZone.name} → {ride.destinationZone.name}</h2>
+            <h2 id="accept-modal-heading">{ride.originZone.name} â†’ {ride.destinationZone.name}</h2>
           </div>
-          <button className="driver-modal-close" type="button" onClick={onClose} aria-label="Close">✕</button>
+          <button className="driver-modal-close" type="button" onClick={onClose} aria-label="Close">âœ•</button>
         </div>
 
         <div className="driver-modal-details">
@@ -202,7 +203,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.name} — {v.plateNumber} ({v.seatCapacity} seats)
+                  {v.name} â€” {v.plateNumber} ({v.seatCapacity} seats)
                 </option>
               ))}
             </select>
@@ -213,7 +214,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
           <div className="driver-modal-vehicle-note">
             <span className="ride-detail-label">VEHICLE</span>
             <strong>
-              {vehicles[0]!.name} — {vehicles[0]!.plateNumber} ({vehicles[0]!.seatCapacity} seats)
+              {vehicles[0]!.name} â€” {vehicles[0]!.plateNumber} ({vehicles[0]!.seatCapacity} seats)
             </strong>
           </div>
         )}
@@ -232,7 +233,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
             disabled={isSubmitting || vehicles.length === 0}
           >
             {isSubmitting ? "Accepting..." : "Accept ride"}
-            <span aria-hidden="true">→</span>
+            <span aria-hidden="true">â†’</span>
           </button>
           <button
             className="driver-cancel-modal-button"
@@ -248,7 +249,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
   );
 }
 
-// ── Open ride requests list ───────────────────────────────────────────────────
+// â”€â”€ Open ride requests list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OpenRequestsListProps {
   token: string;
@@ -271,7 +272,7 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
       const data = await getOpenRideRequests(token);
       setRides(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load ride requests.");
+      setError(errorText(err, "Could not load ride requests."));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -284,7 +285,7 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
       .then((data) => { if (isCurrent) setRides(data); })
       .catch((err: unknown) => {
         if (isCurrent)
-          setError(err instanceof Error ? err.message : "Could not load ride requests.");
+          setError(errorText(err, "Could not load ride requests."));
       })
       .finally(() => { if (isCurrent) setIsLoading(false); });
     return () => { isCurrent = false; };
@@ -344,7 +345,7 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
                 <span><span className="ride-detail-label">REQUESTED </span>{formatDate(ride.requestedAt)}</span>
               </div>
               <button className="driver-accept-card-button" type="button" onClick={() => setPendingRide(ride)}>
-                Accept<span aria-hidden="true">→</span>
+                Accept<span aria-hidden="true">â†’</span>
               </button>
             </li>
           ))}
@@ -365,7 +366,7 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
   );
 }
 
-// ── Passenger payment card ────────────────────────────────────────────────────
+// â”€â”€ Passenger payment card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Loaded lazily after the trip completes so we don't call getPaymentForRide
 // during an active trip (payment record doesn't exist yet until completeTrip).
 
@@ -376,25 +377,52 @@ interface PassengerPaymentProps {
 }
 
 function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPaymentProps) {
+  const rideRequestId = member.rideRequest.id;
   const [payment, setPayment] = useState<DriverPayment | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // Starts true: this component only renders after the trip ends, and the
+  // fare is fetched immediately. It used to start false and was never set to
+  // true, so the "Loading fare..." branch was dead code and a completed trip
+  // showed a blank space where the fare should have been.
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isCollecting, setIsCollecting] = useState(false);
   const [collectError, setCollectError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!poolCompleted) return;
     let isCurrent = true;
-    getPaymentForRide(token, member.rideRequest.id)
-      .then((p) => { if (isCurrent) { setPayment(p); setIsLoading(false); } })
+
+    getPaymentForRide(token, rideRequestId)
+      .then((p) => {
+        if (!isCurrent) return;
+        setPayment(p);
+        setIsLoading(false);
+      })
       .catch((err: unknown) => {
-        if (isCurrent) {
-          setError(err instanceof Error ? err.message : "Could not load payment.");
-          setIsLoading(false);
+        if (!isCurrent) return;
+        // A completed trip with no payment row is missing data, not a failure
+        // the driver can do anything about - say so rather than showing an
+        // error for a fare that legitimately isn't there.
+        if (err instanceof ApiError && err.status === 404) {
+          setPayment(null);
+          setError("");
+        } else {
+          setError(errorText(err, "Could not load this passenger's fare."));
         }
+        setIsLoading(false);
       });
-    return () => { isCurrent = false; };
-  }, [poolCompleted, member.rideRequest.id, token]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [poolCompleted, rideRequestId, token, reloadKey]);
+
+  async function handleRetry() {
+    setIsLoading(true);
+    setError("");
+    setReloadKey((key) => key + 1);
+  }
 
   async function handleCollect() {
     if (!payment) return;
@@ -404,7 +432,7 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
       const updated = await collectPayment(token, payment.id);
       setPayment(updated);
     } catch (err) {
-      setCollectError(err instanceof Error ? err.message : "Could not collect payment.");
+      setCollectError(errorText(err, "Could not collect payment."));
     } finally {
       setIsCollecting(false);
     }
@@ -412,9 +440,38 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
 
   if (!poolCompleted) return null;
 
-  if (isLoading) return <div className="passenger-payment-loading">Loading fare...</div>;
-  if (error) return <p className="driver-inline-error">{error}</p>;
-  if (!payment) return null;
+  if (isLoading) {
+    return (
+      <div className="passenger-payment-loading" aria-live="polite">
+        Loading fare...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="passenger-payment-row">
+        <p className="driver-inline-error" role="alert">
+          {error}
+        </p>
+        <button
+          className="driver-text-action"
+          type="button"
+          onClick={() => void handleRetry()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!payment) {
+    return (
+      <p className="history-payment">
+        No fare was recorded for this passenger.
+      </p>
+    );
+  }
 
   const canCollect =
     payment.method === "CASH" && payment.status === "PENDING";
@@ -448,7 +505,7 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
   );
 }
 
-// ── Lifecycle actions ─────────────────────────────────────────────────────────
+// â”€â”€ Lifecycle actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface LifecycleActionsProps {
   token: string;
@@ -467,12 +524,12 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
     onError("");
     try {
       const updated = await action();
-      // COMPLETED and CANCELLED pools are no longer "active" —
+      // COMPLETED and CANCELLED pools are no longer "active" â€”
       // pass them up so the parent can move the pool out of the active slot
       // while still rendering the final state (parent decides).
       onPoolUpdated(updated);
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Action failed. Try again.");
+      onError(errorText(err, "Action failed. Try again."));
     } finally {
       setIsBusy(false);
     }
@@ -485,7 +542,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
       <p className="eyebrow">TRIP ACTIONS</p>
 
       <div className="lifecycle-buttons">
-        {/* OPEN → arrive */}
+        {/* OPEN â†’ arrive */}
         {status === "OPEN" && (
           <button
             className="lifecycle-btn lifecycle-btn-arrive"
@@ -497,7 +554,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
           </button>
         )}
 
-        {/* DRIVER_ARRIVED → start */}
+        {/* DRIVER_ARRIVED â†’ start */}
         {status === "DRIVER_ARRIVED" && (
           <button
             className="lifecycle-btn lifecycle-btn-start"
@@ -509,7 +566,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
           </button>
         )}
 
-        {/* STARTED → complete */}
+        {/* STARTED â†’ complete */}
         {status === "STARTED" && (
           <button
             className="lifecycle-btn lifecycle-btn-complete"
@@ -576,7 +633,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
   );
 }
 
-// ── Active pool view ──────────────────────────────────────────────────────────
+// â”€â”€ Active pool view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ActivePoolViewProps {
   token: string;
@@ -585,7 +642,7 @@ interface ActivePoolViewProps {
 }
 
 function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
-  // localPool overrides the parent prop after a lifecycle action fires —
+  // localPool overrides the parent prop after a lifecycle action fires â€”
   // avoids a useEffect sync which triggers the set-state-in-effect lint rule.
   const [localPool, setLocalPool] = useState<ActivePool | null>(null);
   const currentPool = localPool ?? pool;const [timeline, setTimeline] = useState<PoolTimelineEntry[]>([]);
@@ -603,7 +660,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       })
       .catch((err: unknown) => {
         if (isCurrent) {
-          setTimelineError(err instanceof Error ? err.message : "Could not load trip timeline.");
+          setTimelineError(errorText(err, "Could not load trip timeline."));
           setIsLoadingTimeline(false);
         }
       });
@@ -625,7 +682,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       }
       onPoolUpdated(fresh);
     } catch (err) {
-      setTimelineError(err instanceof Error ? err.message : "Could not refresh trip status.");
+      setTimelineError(errorText(err, "Could not refresh trip status."));
     } finally {
       setIsRefreshing(false);
     }
@@ -653,7 +710,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       <div className="driver-section-heading">
         <div>
           <p className="eyebrow">DRIVER / ACTIVE TRIP</p>
-          <h2>{currentPool.originZone.name} → {currentPool.destinationZone.name}</h2>
+          <h2>{currentPool.originZone.name} â†’ {currentPool.destinationZone.name}</h2>
         </div>
         <div className="driver-heading-right">
           <StatusBadge status={currentPool.status} />
@@ -689,7 +746,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
         </div>
       </div>
 
-      {/* Lifecycle action buttons — not shown for terminal states */}
+      {/* Lifecycle action buttons â€” not shown for terminal states */}
       {!isTerminal && (
         <LifecycleActions
           token={token}
@@ -719,7 +776,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                 <div className="driver-passenger-route">
                   <span className="ride-detail-label">ROUTE</span>
                   <span>
-                    {member.rideRequest.originZone.name} → {member.rideRequest.destinationZone.name}
+                    {member.rideRequest.originZone.name} â†’ {member.rideRequest.destinationZone.name}
                   </span>
                 </div>
                 <div className="driver-passenger-seats">
@@ -760,7 +817,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                   <div className="timeline-entry-heading">
                     <strong>
                       {entry.rideRequest
-                        ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
+                        ? `${entry.rideRequest.passenger.name} â€” ${String(entry.status).replaceAll("_", " ")}`
                         : String(entry.status).replaceAll("_", " ")}
                     </strong>
                     <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
@@ -776,7 +833,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
   );
 }
 
-// ── Pool history ──────────────────────────────────────────────────────────────
+// â”€â”€ Pool history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface PoolHistoryListProps {
   token: string;
@@ -789,7 +846,9 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loadingTimelineId, setLoadingTimelineId] = useState<string | null>(null);
   const [loadedTimeline, setLoadedTimeline] = useState<{ poolId: string; entries: PoolTimelineEntry[] } | null>(null);
-  const [timelineError, setTimelineError] = useState<string | null>(null);
+  // Keyed by trip, not a bare string. With a single value, failing to load
+  // trip A's timeline and then expanding trip B showed A's error under B.
+  const [timelineError, setTimelineError] = useState<{ poolId: string; message: string } | null>(null);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -797,7 +856,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
     getPoolHistory(token)
       .then((data) => { if (isCurrent) setPools(data); })
       .catch((err: unknown) => {
-        if (isCurrent) setError(err instanceof Error ? err.message : "Could not load trip history.");
+        if (isCurrent) setError(errorText(err, "Could not load trip history."));
       })
       .finally(() => { if (isCurrent) setIsLoading(false); });
     return () => { isCurrent = false; };
@@ -814,7 +873,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
       if (seq.current === s) setLoadedTimeline({ poolId, entries });
     } catch (err) {
       if (seq.current === s)
-        setTimelineError(err instanceof Error ? err.message : "Could not load timeline.");
+        setTimelineError({ poolId, message: errorText(err, "Could not load timeline.") });
     } finally {
       if (seq.current === s) setLoadingTimelineId(null);
     }
@@ -840,6 +899,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
           {pools.map((pool) => {
             const isExpanded = expandedId === pool.id;
             const tl = loadedTimeline?.poolId === pool.id ? loadedTimeline : null;
+            const thisTripError = timelineError?.poolId === pool.id ? timelineError : null;
             return (
               <li className="driver-history-item" key={pool.id}>
                 <button
@@ -849,7 +909,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                   onClick={() => void toggleTimeline(pool.id)}
                 >
                   <span className="driver-history-route">
-                    <strong>{pool.originZone.name} → {pool.destinationZone.name}</strong>
+                    <strong>{pool.originZone.name} â†’ {pool.destinationZone.name}</strong>
                     <small>
                       {formatDate(pool.createdAt)} / {pool.vehicle.name} /{" "}
                       {pool.maxSeats - pool.availableSeats} passenger
@@ -864,8 +924,10 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                   <div className="driver-history-details">
                     {loadingTimelineId === pool.id ? (
                       <div className="driver-loading">Loading timeline...</div>
-                    ) : timelineError ? (
-                      <p className="driver-inline-error">{timelineError}</p>
+                    ) : thisTripError ? (
+                      <p className="driver-inline-error" role="alert">
+                        {thisTripError.message}
+                      </p>
                     ) : tl && tl.entries.length > 0 ? (
                       <ol className="ride-timeline">
                         {tl.entries.map((entry, i) => (
@@ -878,7 +940,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                               <div className="timeline-entry-heading">
                                 <strong>
                                   {entry.rideRequest
-                                    ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
+                                    ? `${entry.rideRequest.passenger.name} â€” ${String(entry.status).replaceAll("_", " ")}`
                                     : String(entry.status).replaceAll("_", " ")}
                                 </strong>
                                 <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
@@ -902,7 +964,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
   );
 }
 
-// ── Main driver panel ─────────────────────────────────────────────────────────
+// â”€â”€ Main driver panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function DriverPanel({ token, driverName }: DriverPanelProps) {
   const [isOnline, setIsOnline] = useState(false);
@@ -929,7 +991,7 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
       })
       .catch((err: unknown) => {
         if (isCurrent)
-          setBootError(err instanceof Error ? err.message : "Could not load driver data. Check the API and reload.");
+          setBootError(errorText(err, "Could not load driver data. Check the API and reload."));
       })
       .finally(() => { if (isCurrent) setIsBooting(false); });
     return () => { isCurrent = false; };
