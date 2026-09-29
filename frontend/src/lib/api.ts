@@ -358,7 +358,7 @@ export interface AcceptRideResult {
 
 export function setDriverStatus(token: string, isOnline: boolean) {
   return request<{ isOnline: boolean }>(
-    "/api/driver/me/status",
+    "/api/drivers/me/status",
     { method: "PATCH", body: JSON.stringify({ isOnline }) },
     token,
   );
