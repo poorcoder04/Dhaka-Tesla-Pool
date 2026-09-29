@@ -407,3 +407,106 @@ export function getPoolTimeline(token: string, poolId: string) {
 export function getPoolHistory(token: string) {
   return request<PoolHistoryEntry[]>("/api/pools/me/history", {}, token);
 }
+
+// ── Lifecycle types ──────────────────────────────────────────────────────────
+
+/** Shape returned by all pool lifecycle endpoints (arrive/start/complete/cancel) */
+export interface LifecyclePool extends ActivePool {
+  completedAt: string | null;
+  cancelledAt: string | null;
+}
+
+/** Payment record attached to a completed ride — driver-facing view */
+export interface DriverPayment {
+  id: string;
+  amount: number | string;
+  method: PaymentMethod;
+  status: "PENDING" | "PAID" | "FAILED";
+  paidAt: string | null;
+  transactionId: string | null;
+  rideRequest: {
+    id: string;
+    passengerId: string;
+  };
+}
+
+/** Wallet balance returned by GET /api/wallet */
+export interface WalletBalance {
+  id: string;
+  name: string;
+  walletBalance: number | string;
+}
+
+/** Topup result returned by POST /api/wallet/topup */
+export interface TopupResult {
+  id: string;
+  walletBalance: number | string;
+}
+
+// ── Driver lifecycle API functions ───────────────────────────────────────────
+
+export function arriveAtPickup(token: string, poolId: string) {
+  return request<LifecyclePool>(
+    `/api/pools/${encodeURIComponent(poolId)}/arrive`,
+    { method: "POST" },
+    token,
+  );
+}
+
+export function startTrip(token: string, poolId: string) {
+  return request<LifecyclePool>(
+    `/api/pools/${encodeURIComponent(poolId)}/start`,
+    { method: "POST" },
+    token,
+  );
+}
+
+export function completeTrip(token: string, poolId: string) {
+  return request<LifecyclePool>(
+    `/api/pools/${encodeURIComponent(poolId)}/complete`,
+    { method: "POST" },
+    token,
+  );
+}
+
+export function cancelTrip(token: string, poolId: string, reason?: string) {
+  return request<LifecyclePool>(
+    `/api/pools/${encodeURIComponent(poolId)}/cancel`,
+    { method: "POST", body: JSON.stringify({ reason: reason ?? "" }) },
+    token,
+  );
+}
+
+// ── Payment API functions ────────────────────────────────────────────────────
+
+/** Driver marks a cash payment as collected for one passenger */
+export function collectPayment(token: string, paymentId: string) {
+  return request<DriverPayment>(
+    `/api/payments/${encodeURIComponent(paymentId)}/collect`,
+    { method: "POST" },
+    token,
+  );
+}
+
+/** Get the payment record for a specific ride request (driver or passenger) */
+export function getPaymentForRide(token: string, rideRequestId: string) {
+  return request<DriverPayment>(
+    `/api/payments/ride/${encodeURIComponent(rideRequestId)}`,
+    {},
+    token,
+  );
+}
+
+// ── Wallet API functions (passenger) ────────────────────────────────────────
+
+export function getWalletBalance(token: string) {
+  return request<WalletBalance>("/api/wallet", {}, token);
+}
+
+export function topupWallet(token: string, amount: number) {
+  return request<TopupResult>(
+    "/api/wallet/topup",
+    { method: "POST", body: JSON.stringify({ amount }) },
+    token,
+  );
+}
