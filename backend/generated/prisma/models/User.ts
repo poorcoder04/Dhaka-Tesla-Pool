@@ -20,8 +20,18 @@ export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayloa
 
 export type AggregateUser = {
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
+}
+
+export type UserAvgAggregateOutputType = {
+  walletBalance: runtime.Decimal | null
+}
+
+export type UserSumAggregateOutputType = {
+  walletBalance: runtime.Decimal | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -31,6 +41,7 @@ export type UserMinAggregateOutputType = {
   phone: string | null
   role: $Enums.UserRole | null
   password: string | null
+  walletBalance: runtime.Decimal | null
   isActive: boolean | null
   isOnline: boolean | null
   createdAt: Date | null
@@ -44,6 +55,7 @@ export type UserMaxAggregateOutputType = {
   phone: string | null
   role: $Enums.UserRole | null
   password: string | null
+  walletBalance: runtime.Decimal | null
   isActive: boolean | null
   isOnline: boolean | null
   createdAt: Date | null
@@ -57,6 +69,7 @@ export type UserCountAggregateOutputType = {
   phone: number
   role: number
   password: number
+  walletBalance: number
   isActive: number
   isOnline: number
   createdAt: number
@@ -65,6 +78,14 @@ export type UserCountAggregateOutputType = {
 }
 
 
+export type UserAvgAggregateInputType = {
+  walletBalance?: true
+}
+
+export type UserSumAggregateInputType = {
+  walletBalance?: true
+}
+
 export type UserMinAggregateInputType = {
   id?: true
   name?: true
@@ -72,6 +93,7 @@ export type UserMinAggregateInputType = {
   phone?: true
   role?: true
   password?: true
+  walletBalance?: true
   isActive?: true
   isOnline?: true
   createdAt?: true
@@ -85,6 +107,7 @@ export type UserMaxAggregateInputType = {
   phone?: true
   role?: true
   password?: true
+  walletBalance?: true
   isActive?: true
   isOnline?: true
   createdAt?: true
@@ -98,6 +121,7 @@ export type UserCountAggregateInputType = {
   phone?: true
   role?: true
   password?: true
+  walletBalance?: true
   isActive?: true
   isOnline?: true
   createdAt?: true
@@ -143,6 +167,18 @@ export type UserAggregateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: UserAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: UserSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: UserMinAggregateInputType
@@ -173,6 +209,8 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
   take?: number
   skip?: number
   _count?: UserCountAggregateInputType | true
+  _avg?: UserAvgAggregateInputType
+  _sum?: UserSumAggregateInputType
   _min?: UserMinAggregateInputType
   _max?: UserMaxAggregateInputType
 }
@@ -184,11 +222,14 @@ export type UserGroupByOutputType = {
   phone: string
   role: $Enums.UserRole
   password: string | null
+  walletBalance: runtime.Decimal
   isActive: boolean
   isOnline: boolean
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
+  _avg: UserAvgAggregateOutputType | null
+  _sum: UserSumAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
 }
@@ -218,6 +259,7 @@ export type UserWhereInput = {
   phone?: Prisma.StringFilter<"User"> | string
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableFilter<"User"> | string | null
+  walletBalance?: Prisma.DecimalFilter<"User"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFilter<"User"> | boolean
   isOnline?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -236,6 +278,7 @@ export type UserOrderByWithRelationInput = {
   phone?: Prisma.SortOrder
   role?: Prisma.SortOrder
   password?: Prisma.SortOrderInput | Prisma.SortOrder
+  walletBalance?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -257,6 +300,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"User"> | string
   role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableFilter<"User"> | string | null
+  walletBalance?: Prisma.DecimalFilter<"User"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFilter<"User"> | boolean
   isOnline?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
@@ -275,13 +319,16 @@ export type UserOrderByWithAggregationInput = {
   phone?: Prisma.SortOrder
   role?: Prisma.SortOrder
   password?: Prisma.SortOrderInput | Prisma.SortOrder
+  walletBalance?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
+  _avg?: Prisma.UserAvgOrderByAggregateInput
   _max?: Prisma.UserMaxOrderByAggregateInput
   _min?: Prisma.UserMinOrderByAggregateInput
+  _sum?: Prisma.UserSumOrderByAggregateInput
 }
 
 export type UserScalarWhereWithAggregatesInput = {
@@ -294,6 +341,7 @@ export type UserScalarWhereWithAggregatesInput = {
   phone?: Prisma.StringWithAggregatesFilter<"User"> | string
   role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
   password?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  walletBalance?: Prisma.DecimalWithAggregatesFilter<"User"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   isOnline?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
@@ -307,6 +355,7 @@ export type UserCreateInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -325,6 +374,7 @@ export type UserUncheckedCreateInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -343,6 +393,7 @@ export type UserUpdateInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -361,6 +412,7 @@ export type UserUncheckedUpdateInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -379,6 +431,7 @@ export type UserCreateManyInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -392,6 +445,7 @@ export type UserUpdateManyMutationInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -405,6 +459,7 @@ export type UserUncheckedUpdateManyInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -418,10 +473,15 @@ export type UserCountOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
+  walletBalance?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type UserAvgOrderByAggregateInput = {
+  walletBalance?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -431,6 +491,7 @@ export type UserMaxOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
+  walletBalance?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -444,10 +505,15 @@ export type UserMinOrderByAggregateInput = {
   phone?: Prisma.SortOrder
   role?: Prisma.SortOrder
   password?: Prisma.SortOrder
+  walletBalance?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   isOnline?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type UserSumOrderByAggregateInput = {
+  walletBalance?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -465,6 +531,14 @@ export type NullableStringFieldUpdateOperationsInput = {
 
 export type EnumUserRoleFieldUpdateOperationsInput = {
   set?: $Enums.UserRole
+}
+
+export type DecimalFieldUpdateOperationsInput = {
+  set?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
 export type BoolFieldUpdateOperationsInput = {
@@ -552,6 +626,7 @@ export type UserCreateWithoutVehiclesOwnedInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -569,6 +644,7 @@ export type UserUncheckedCreateWithoutVehiclesOwnedInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -602,6 +678,7 @@ export type UserUpdateWithoutVehiclesOwnedInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -619,6 +696,7 @@ export type UserUncheckedUpdateWithoutVehiclesOwnedInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -636,6 +714,7 @@ export type UserCreateWithoutPoolsAsDriverInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -653,6 +732,7 @@ export type UserUncheckedCreateWithoutPoolsAsDriverInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -686,6 +766,7 @@ export type UserUpdateWithoutPoolsAsDriverInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -703,6 +784,7 @@ export type UserUncheckedUpdateWithoutPoolsAsDriverInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -720,6 +802,7 @@ export type UserCreateWithoutRideRequestsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -737,6 +820,7 @@ export type UserUncheckedCreateWithoutRideRequestsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -770,6 +854,7 @@ export type UserUpdateWithoutRideRequestsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -787,6 +872,7 @@ export type UserUncheckedUpdateWithoutRideRequestsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -804,6 +890,7 @@ export type UserCreateWithoutPoolMembershipsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -821,6 +908,7 @@ export type UserUncheckedCreateWithoutPoolMembershipsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -854,6 +942,7 @@ export type UserUpdateWithoutPoolMembershipsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -871,6 +960,7 @@ export type UserUncheckedUpdateWithoutPoolMembershipsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -888,6 +978,7 @@ export type UserCreateWithoutPaymentsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -905,6 +996,7 @@ export type UserUncheckedCreateWithoutPaymentsInput = {
   phone: string
   role?: $Enums.UserRole
   password?: string | null
+  walletBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: boolean
   isOnline?: boolean
   createdAt?: Date | string
@@ -938,6 +1030,7 @@ export type UserUpdateWithoutPaymentsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -955,6 +1048,7 @@ export type UserUncheckedUpdateWithoutPaymentsInput = {
   phone?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
   password?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  walletBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isOnline?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1039,6 +1133,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   phone?: boolean
   role?: boolean
   password?: boolean
+  walletBalance?: boolean
   isActive?: boolean
   isOnline?: boolean
   createdAt?: boolean
@@ -1058,6 +1153,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   phone?: boolean
   role?: boolean
   password?: boolean
+  walletBalance?: boolean
   isActive?: boolean
   isOnline?: boolean
   createdAt?: boolean
@@ -1071,6 +1167,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   phone?: boolean
   role?: boolean
   password?: boolean
+  walletBalance?: boolean
   isActive?: boolean
   isOnline?: boolean
   createdAt?: boolean
@@ -1084,13 +1181,14 @@ export type UserSelectScalar = {
   phone?: boolean
   role?: boolean
   password?: boolean
+  walletBalance?: boolean
   isActive?: boolean
   isOnline?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "password" | "isActive" | "isOnline" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "phone" | "role" | "password" | "walletBalance" | "isActive" | "isOnline" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   vehiclesOwned?: boolean | Prisma.User$vehiclesOwnedArgs<ExtArgs>
   rideRequests?: boolean | Prisma.User$rideRequestsArgs<ExtArgs>
@@ -1118,6 +1216,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     phone: string
     role: $Enums.UserRole
     password: string | null
+    walletBalance: runtime.Decimal
     isActive: boolean
     isOnline: boolean
     createdAt: Date
@@ -1556,6 +1655,7 @@ export interface UserFieldRefs {
   readonly phone: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'UserRole'>
   readonly password: Prisma.FieldRef<"User", 'String'>
+  readonly walletBalance: Prisma.FieldRef<"User", 'Decimal'>
   readonly isActive: Prisma.FieldRef<"User", 'Boolean'>
   readonly isOnline: Prisma.FieldRef<"User", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
