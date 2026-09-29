@@ -51,6 +51,9 @@ coverage/
 *.tmp
 *.cache
 
+# Local project notes — not part of the codebase
+project-details/
+
 .agents/
 .claude/
 .cursor/
