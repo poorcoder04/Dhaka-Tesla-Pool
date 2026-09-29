@@ -4,6 +4,7 @@ import {
   ApiError,
   cancelRideRequest,
   createRideRequest,
+  errorText,
   estimateRideFare,
   getRideRequest,
   getRideRequestHistory,
@@ -66,10 +67,17 @@ function loadRideTracking(token: string, rideRequestId: string) {
 
 // ── Wallet panel ─────────────────────────────────────────────────────────────
 
-function WalletPanel({ token }: { token: string }) {
+function WalletPanel({
+  token,
+  onUnavailableChange,
+}: {
+  token: string;
+  onUnavailableChange: (unavailable: boolean) => void;
+}) {
   const [wallet, setWallet] = useState<WalletBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [topupAmount, setTopupAmount] = useState("");
   const [isTopingUp, setIsTopingUp] = useState(false);
   const [topupError, setTopupError] = useState("");
@@ -81,12 +89,22 @@ function WalletPanel({ token }: { token: string }) {
       .then((data) => { if (isCurrent) { setWallet(data); setIsLoading(false); } })
       .catch((err: unknown) => {
         if (isCurrent) {
-          setError(err instanceof Error ? err.message : "Could not load wallet.");
+          setError(errorText(err, "Could not load your wallet."));
           setIsLoading(false);
         }
       });
     return () => { isCurrent = false; };
-  }, [token]);
+  }, [token, reloadKey]);
+
+  useEffect(() => {
+    onUnavailableChange(Boolean(error));
+  }, [error, onUnavailableChange]);
+
+  function handleRetry() {
+    setIsLoading(true);
+    setError("");
+    setReloadKey((key) => key + 1);
+  }
 
   async function handleTopup(e: React.FormEvent) {
     e.preventDefault();
@@ -100,14 +118,52 @@ function WalletPanel({ token }: { token: string }) {
       setTopupAmount("");
       setShowTopup(false);
     } catch (err) {
-      setTopupError(err instanceof Error ? err.message : "Topup failed.");
+      setTopupError(errorText(err, "Topup failed."));
     } finally {
       setIsTopingUp(false);
     }
   }
 
-  if (isLoading) return null; // silent — don't block the booking form
-  if (error) return null;     // non-critical, don't show an error wall
+  // The wallet is not required to request a cash ride, so a failure must not
+  // block the booking form. It used to render null, which left the passenger
+  // with a TeslaPay option that silently did nothing and no way to find out
+  // why. It now stays in place, showing what went wrong and a way to retry.
+  if (error) {
+    return (
+      <div className="wallet-panel wallet-panel-unavailable">
+        <div className="wallet-balance-row">
+          <div className="wallet-balance-info">
+            <span className="ride-detail-label">TESLAPAY WALLET</span>
+            <strong className="wallet-amount">Unavailable</strong>
+          </div>
+          <button
+            className="wallet-topup-trigger"
+            type="button"
+            onClick={handleRetry}
+          >
+            Retry
+          </button>
+        </div>
+        <p className="ride-inline-error" role="alert">{error}</p>
+        <p className="wallet-topup-note">
+          You can still request a ride and pay cash.
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="wallet-panel" aria-live="polite">
+        <div className="wallet-balance-row">
+          <div className="wallet-balance-info">
+            <span className="ride-detail-label">TESLAPAY WALLET</span>
+            <strong className="wallet-amount">Loading...</strong>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wallet-panel">
@@ -196,7 +252,15 @@ export default function RideRequestPanel({
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelledRide, setCancelledRide] = useState<PassengerRide | null>(null);
+  const [isWalletUnavailable, setIsWalletUnavailable] = useState(false);
   const quoteSequence = useRef(0);
+
+  // Fall back to cash if the wallet turns out to be unusable, so the form is
+  // never left on a payment method we know cannot work.
+  function handleWalletUnavailableChange(unavailable: boolean) {
+    setIsWalletUnavailable(unavailable);
+    if (unavailable) setPaymentMethod("CASH");
+  }
 
   useEffect(() => {
     let isCurrent = true;
@@ -207,11 +271,7 @@ export default function RideRequestPanel({
       })
       .catch((error: unknown) => {
         if (isCurrent) {
-          setZoneError(
-            error instanceof Error
-              ? error.message
-              : "Could not load Dhaka areas.",
-          );
+          setZoneError(errorText(error, "Could not load Dhaka areas."));
         }
       })
       .finally(() => {
@@ -232,11 +292,7 @@ export default function RideRequestPanel({
       })
       .catch((error: unknown) => {
         if (isCurrent) {
-          setRidesError(
-            error instanceof Error
-              ? error.message
-              : "Could not load your ride requests.",
-          );
+          setRidesError(errorText(error, "Could not load your ride requests."));
         }
       })
       .finally(() => {
@@ -274,11 +330,7 @@ export default function RideRequestPanel({
       })
       .catch((error: unknown) => {
         if (isCurrent) {
-          setTrackingError(
-            error instanceof Error
-              ? error.message
-              : "Could not load ride activity.",
-          );
+          setTrackingError(errorText(error, "Could not load ride activity."));
         }
       });
 
@@ -323,11 +375,7 @@ export default function RideRequestPanel({
       }
     } catch (error) {
       if (quoteSequence.current === sequence) {
-        setEstimateError(
-          error instanceof Error
-            ? error.message
-            : "Could not estimate this fare.",
-        );
+        setEstimateError(errorText(error, "Could not estimate this fare."));
       }
     } finally {
       if (quoteSequence.current === sequence) setIsEstimating(false);
@@ -349,11 +397,7 @@ export default function RideRequestPanel({
       });
       setRide(createdRide);
     } catch (error) {
-      setRequestError(
-        error instanceof Error
-          ? error.message
-          : "Could not submit your ride request.",
-      );
+      setRequestError(errorText(error, "Could not submit your ride request."));
     } finally {
       setIsSubmitting(false);
     }
@@ -374,11 +418,7 @@ export default function RideRequestPanel({
       setTrackingDetails(details);
       setRideTimeline(timeline);
     } catch (error) {
-      setTrackingError(
-        error instanceof Error
-          ? error.message
-          : "Could not refresh your ride status.",
-      );
+      setTrackingError(errorText(error, "Could not refresh your ride status."));
     } finally {
       setIsRefreshing(false);
     }
@@ -392,11 +432,7 @@ export default function RideRequestPanel({
     try {
       setPassengerRides(await getMyRideRequests(token));
     } catch (error) {
-      setRidesError(
-        error instanceof Error
-          ? error.message
-          : "Could not load your ride request.",
-      );
+      setRidesError(errorText(error, "Could not load your ride request."));
     } finally {
       setIsLoadingRides(false);
     }
@@ -424,9 +460,10 @@ export default function RideRequestPanel({
       setCancelledRide(cancelled);
     } catch (error) {
       setCancellationError(
-        error instanceof Error
-          ? error.message
-          : "Could not cancel this ride. Refresh its status and try again.",
+        errorText(
+          error,
+          "Could not cancel this ride. Refresh its status and try again.",
+        ),
       );
       setIsConfirmingCancellation(false);
     } finally {
@@ -710,7 +747,10 @@ export default function RideRequestPanel({
         <span className="ride-step-mark">01 / RIDE</span>
       </div>
 
-      <WalletPanel token={token} />
+      <WalletPanel
+        token={token}
+        onUnavailableChange={handleWalletUnavailableChange}
+      />
 
       {isLoadingZones ? (
         <div className="ride-loading" aria-live="polite">
@@ -819,10 +859,22 @@ export default function RideRequestPanel({
                   aria-pressed={paymentMethod === "WALLET"}
                   className={paymentMethod === "WALLET" ? "payment-active" : ""}
                   onClick={() => setPaymentMethod("WALLET")}
+                  disabled={isWalletUnavailable}
+                  title={
+                    isWalletUnavailable
+                      ? "Your wallet is unavailable, so TeslaPay cannot be used for this ride."
+                      : undefined
+                  }
                 >
                   TeslaPay
                 </button>
               </div>
+              {isWalletUnavailable && (
+                <p className="ride-inline-error">
+                  TeslaPay is unavailable right now. This ride will be paid in
+                  cash.
+                </p>
+              )}
             </div>
           </div>
 
@@ -967,10 +1019,7 @@ function RideHistoryList({
       if (requestSequence.current === sequence) {
         setLoadError({
           rideId: ride.id,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Could not load this ride's history.",
+          message: errorText(error, "Could not load this ride's history."),
         });
       }
     } finally {

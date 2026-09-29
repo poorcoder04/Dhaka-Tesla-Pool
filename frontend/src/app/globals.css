@@ -800,6 +800,17 @@ a:focus-visible {
   box-shadow: 0 1px 3px rgb(24 35 31 / 12%);
 }
 
+/* TeslaPay when the wallet itself could not be loaded: still visible so the
+   reason is obvious, but not selectable. */
+.payment-switch button:disabled {
+  color: #a8b0aa;
+  cursor: not-allowed;
+}
+
+.payment-switch button:disabled:hover {
+  background: transparent;
+}
+
 .ride-actions {
   display: flex;
   align-items: center;
@@ -2521,6 +2532,12 @@ a:focus-visible {
   border-top: 1px solid #e8ece7;
 }
 
+/* Retry affordance when this passenger's fare failed to load. */
+.passenger-payment-row .driver-inline-error {
+  flex: 1 1 220px;
+  margin: 0;
+}
+
 .passenger-fare {
   display: grid;
   gap: 5px;
@@ -2578,6 +2595,22 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
+}
+
+/* The wallet is optional — a failed load must not look like a failed page. */
+.wallet-panel-unavailable {
+  border-style: dashed;
+  background: #fbfcfa;
+}
+
+.wallet-panel-unavailable .wallet-amount {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink-soft);
+}
+
+.wallet-panel .ride-inline-error {
+  margin-top: 10px;
 }
 
 .wallet-balance-row {
