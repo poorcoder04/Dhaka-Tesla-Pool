@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, UserRole } from "../generated/prisma/client.js";
+import { hashPassword } from "../src/utils/password.js";
 
 const connectionString = process.env["DATABASE_URL"] ?? "";
 const adapter = new PrismaPg({ connectionString });
@@ -9,6 +10,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Starting seed...");
+  const demoPasswordHash = await hashPassword("DhakaPoolDemo123!");
 
   // 1. Zones
   // PRD Section 4 names Banani, Gulshan, Mohakhali, Dhanmondi, Mirpur,
@@ -46,46 +48,49 @@ async function main() {
   // 2. Users
   const jashim = await prisma.user.upsert({
     where: { phone: "01700000001" },
-    update: {},
+    update: { password: demoPasswordHash },
     create: {
       name: "Jashim",
       phone: "01700000001",
       email: "jashim@example.com",
       role: UserRole.DRIVER,
-      password: "hashed_password_here", // replace with real hash before production
+      password: demoPasswordHash,
     },
   });
 
   const nusrat = await prisma.user.upsert({
     where: { phone: "01700000002" },
-    update: {},
+    update: { password: demoPasswordHash },
     create: {
       name: "Nusrat",
       phone: "01700000002",
       email: "nusrat@example.com",
       role: UserRole.PASSENGER,
+      password: demoPasswordHash,
     },
   });
 
   const rafiq = await prisma.user.upsert({
     where: { phone: "01700000003" },
-    update: {},
+    update: { password: demoPasswordHash },
     create: {
       name: "Rafiq",
       phone: "01700000003",
       email: "rafiq@example.com",
       role: UserRole.PASSENGER,
+      password: demoPasswordHash,
     },
   });
 
   await prisma.user.upsert({
     where: { phone: "01700000004" },
-    update: {},
+    update: { password: demoPasswordHash },
     create: {
       name: "Shirin",
       phone: "01700000004",
       email: "shirin@example.com",
       role: UserRole.PASSENGER,
+      password: demoPasswordHash,
     },
   });
 
