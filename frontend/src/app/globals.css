@@ -979,6 +979,137 @@ a:focus-visible {
   font-weight: 650;
 }
 
+.ride-tracking-section {
+  margin-top: 24px;
+  padding-top: 21px;
+  border-top: 1px solid var(--line);
+}
+
+.tracking-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tracking-heading .eyebrow {
+  margin-bottom: 5px;
+}
+
+.tracking-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.refresh-status-button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.refresh-status-button:hover:not(:disabled) {
+  border-color: #aab8ab;
+  background: #f8faf6;
+}
+
+.refresh-status-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.assigned-vehicle {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.assigned-vehicle > span:last-child {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.ride-timeline {
+  margin: 0;
+  padding: 2px 0 0 8px;
+  list-style: none;
+}
+
+.ride-timeline-entry {
+  position: relative;
+  min-height: 58px;
+  margin-left: 5px;
+  padding: 0 0 19px 20px;
+  border-left: 1px solid #d5ded5;
+}
+
+.ride-timeline-entry:last-child {
+  min-height: 0;
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: 1px;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #aab8ab;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.timeline-marker-current {
+  border-color: #779d4e;
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgb(214 243 106 / 24%);
+}
+
+.timeline-entry-content {
+  display: grid;
+  gap: 5px;
+}
+
+.timeline-entry-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.timeline-entry-heading strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.timeline-entry-heading time {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.timeline-entry-content p {
+  margin: 0;
+  color: #68746c;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .ride-confirmation > div {
   display: grid;
   align-content: start;
@@ -1049,6 +1180,20 @@ a:focus-visible {
   .active-ride-summary {
     grid-template-columns: 1fr 1fr;
     gap: 17px;
+  }
+
+  .assigned-vehicle {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .assigned-vehicle > span:last-child {
+    margin-left: 0;
+  }
+
+  .tracking-heading {
+    align-items: flex-start;
   }
 }
 

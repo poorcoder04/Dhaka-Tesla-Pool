@@ -3,11 +3,15 @@
 import {
   createRideRequest,
   estimateRideFare,
+  getRideRequest,
+  getRideRequestHistory,
   getMyRideRequests,
   getZones,
   type FareEstimate,
   type PaymentMethod,
   type PassengerRide,
+  type PassengerRideDetails,
+  type RideHistoryEntry,
   type RideRequestResult,
   type RideStatus,
   type Zone,
@@ -40,6 +44,13 @@ function formatMoney(amount: number): string {
   }).format(amount);
 }
 
+function loadRideTracking(token: string, rideRequestId: string) {
+  return Promise.all([
+    getRideRequest(token, rideRequestId),
+    getRideRequestHistory(token, rideRequestId),
+  ]);
+}
+
 export default function RideRequestPanel({
   token,
   passengerName,
@@ -55,12 +66,17 @@ export default function RideRequestPanel({
   );
   const [ride, setRide] = useState<RideRequestResult | null>(null);
   const [passengerRides, setPassengerRides] = useState<PassengerRide[]>([]);
+  const [trackingDetails, setTrackingDetails] =
+    useState<PassengerRideDetails | null>(null);
+  const [rideTimeline, setRideTimeline] = useState<RideHistoryEntry[]>([]);
   const [zoneError, setZoneError] = useState("");
   const [ridesError, setRidesError] = useState("");
+  const [trackingError, setTrackingError] = useState("");
   const [estimateError, setEstimateError] = useState("");
   const [requestError, setRequestError] = useState("");
   const [isLoadingZones, setIsLoadingZones] = useState(true);
   const [isLoadingRides, setIsLoadingRides] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const quoteSequence = useRef(0);
@@ -127,6 +143,32 @@ export default function RideRequestPanel({
   const activeRide = passengerRides.find((item) =>
     ACTIVE_RIDE_STATUSES.includes(item.status),
   );
+
+  useEffect(() => {
+    if (!activeRide) return;
+
+    let isCurrent = true;
+
+    loadRideTracking(token, activeRide.id)
+      .then(([details, timeline]) => {
+        if (!isCurrent) return;
+        setTrackingDetails(details);
+        setRideTimeline(timeline);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setTrackingError(
+            error instanceof Error
+              ? error.message
+              : "Could not load ride activity.",
+          );
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeRide, token]);
 
   function clearQuote() {
     quoteSequence.current += 1;
@@ -197,6 +239,31 @@ export default function RideRequestPanel({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleRefreshRide() {
+    if (!activeRide) return;
+
+    setIsRefreshing(true);
+    setTrackingError("");
+
+    try {
+      const [rides, [details, timeline]] = await Promise.all([
+        getMyRideRequests(token),
+        loadRideTracking(token, activeRide.id),
+      ]);
+      setPassengerRides(rides);
+      setTrackingDetails(details);
+      setRideTimeline(timeline);
+    } catch (error) {
+      setTrackingError(
+        error instanceof Error
+          ? error.message
+          : "Could not refresh your ride status.",
+      );
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -277,6 +344,8 @@ export default function RideRequestPanel({
   }
 
   if (activeRide) {
+    const trackingMatchesRide = trackingDetails?.id === activeRide.id;
+
     return (
       <section className="ride-content" aria-labelledby="active-ride-heading">
         <p className="eyebrow">PASSENGER / ACTIVE RIDE</p>
@@ -308,6 +377,73 @@ export default function RideRequestPanel({
               {activeRide.paymentMethod === "CASH" ? "Cash" : "TeslaPay wallet"}
             </strong>
           </div>
+        </div>
+        <div className="ride-tracking-section">
+          <div className="tracking-heading">
+            <div>
+              <p className="eyebrow">STATUS HISTORY</p>
+              <h2>Ride activity</h2>
+            </div>
+            <button
+              className="refresh-status-button"
+              type="button"
+              onClick={handleRefreshRide}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh status"}
+            </button>
+          </div>
+
+          {trackingError && (
+            <p className="ride-inline-error" role="alert">{trackingError}</p>
+          )}
+
+          {!trackingMatchesRide && !trackingError && (
+            <div className="ride-loading" aria-live="polite">
+              Loading ride activity...
+            </div>
+          )}
+
+          {trackingMatchesRide && trackingDetails.pool && (
+            <div className="assigned-vehicle">
+              <span className="ride-detail-label">DRIVER / VEHICLE</span>
+              <strong>
+                {trackingDetails.pool.driver.name} / {trackingDetails.pool.vehicle.name}
+              </strong>
+              {trackingDetails.pool.vehicle.plateNumber && (
+                <span>{trackingDetails.pool.vehicle.plateNumber}</span>
+              )}
+            </div>
+          )}
+
+          {trackingMatchesRide && rideTimeline.length === 0 && (
+            <p className="ride-empty">No status history is available yet.</p>
+          )}
+
+          {trackingMatchesRide && rideTimeline.length > 0 && (
+            <ol className="ride-timeline">
+              {rideTimeline.map((entry, index) => (
+                <li className="ride-timeline-entry" key={entry.id}>
+                  <span
+                    className={`timeline-marker${index === rideTimeline.length - 1 ? " timeline-marker-current" : ""}`}
+                    aria-hidden="true"
+                  />
+                  <div className="timeline-entry-content">
+                    <div className="timeline-entry-heading">
+                      <strong>{entry.status.replaceAll("_", " ")}</strong>
+                      <time dateTime={entry.createdAt}>
+                        {new Intl.DateTimeFormat("en-BD", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(entry.createdAt))}
+                      </time>
+                    </div>
+                    {entry.note && <p>{entry.note}</p>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </section>
     );
