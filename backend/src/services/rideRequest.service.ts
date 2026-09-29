@@ -44,6 +44,7 @@ export async function createRideRequest(passengerId: string, input: CreateRideRe
         originZoneId: originZone.id,
         destinationZoneId: destinationZone.id,
         seatsRequested: input.seatsRequested,
+        paymentMethod: input.paymentMethod,
         status: RideStatus.REQUESTED,
       },
       include: rideRequestInclude,

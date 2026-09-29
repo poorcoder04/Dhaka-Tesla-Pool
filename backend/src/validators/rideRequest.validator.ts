@@ -14,6 +14,7 @@ export const createRideRequestSchema = z
       .min(1, "Must request at least 1 seat")
       .max(3, "A ride request can be for at most 3 seats")
       .default(1),
+    paymentMethod: z.enum(["CASH", "WALLET"]).default("CASH"),
   })
   .refine((data) => data.originZoneId !== data.destinationZoneId, {
     message: "originZoneId and destinationZoneId must be different",

@@ -258,11 +258,55 @@ transitions, and status history for pools and ride requests.
 
 ### Step 6 validation
 
+## Step 7 — Fare Calculation & Payment System
+
+Step 7 adds the real pricing engine and payment flow for Dhaka Tesla Pool. It replaces the placeholder fare helper with a zone-aware calculation that applies pooled seat discounts and persists the money logic in the application service layer.
+
+### What was added
+
+- `backend/src/config/fareConfig.ts` — fare constants and zone distance map
+- `backend/src/utils/estimateFare.ts` — real fare calculation logic with proper discount tiers
+- `backend/src/controllers/payment.controller.ts` — wallet, top-up, estimation, and cash collection endpoints
+- `backend/src/services/payment.service.ts` — wallet balance logic and payment retrieval logic
+- `backend/src/routes/payment.route.ts` — payment routes mounted to the API
+- `backend/src/validators/payment.validator.ts` — validation for wallet and fare estimation payloads
+- `backend/tests/fareCalculation.test.ts` — unit checks for the PRD fare examples
+
+### Payment endpoints
+
+| Method | Path                                | Auth                | Meaning                         |
+| ------ | ----------------------------------- | ------------------- | ------------------------------- |
+| GET    | `/api/wallet`                       | Authenticated user  | View wallet balance             |
+| POST   | `/api/wallet/topup`                 | Authenticated user  | Add value to wallet             |
+| POST   | `/api/fares/estimate`               | Authenticated user  | Estimate solo vs pooled fare    |
+| POST   | `/api/payments/:paymentId/collect`  | Driver              | Mark cash payment as collected  |
+| GET    | `/api/payments/ride/:rideRequestId` | Passenger or driver | View payment details for a ride |
+
+### Business rules
+
+- Base fare is `30` BDT and distance charge is `15` BDT per km
+- Discount is applied based on occupied seats in the pool:
+  - 1 seat: `0%`
+  - 2 seats: `20%`
+  - 3+ seats: `30%`
+- Calculations are done in poysha first, then converted to a decimal-friendly BDT representation for storage
+- The main app now mounts the payment router in `backend/src/index.ts`
+
+### Manual verification
+
+```bash
+cd backend
+npm test -- --run tests/fareCalculation.test.ts
+```
+
+This confirms the Step 7 fare examples match the PRD expectations for Banani → Mohakhali and Banani → Gulshan 1 scenarios.
+
 ```bash
 npm test
 ```
 
 ### api endpoint summary table for step-06
+
 | Method  | Endpoint                  | Who       | Purpose                   |
 | ------- | ------------------------- | --------- | ------------------------- |
 | `PATCH` | `/api/drivers/me/status`  | Driver    | Go **online/offline**     |
