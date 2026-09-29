@@ -3,10 +3,13 @@
 import {
   createRideRequest,
   estimateRideFare,
+  getMyRideRequests,
   getZones,
   type FareEstimate,
   type PaymentMethod,
+  type PassengerRide,
   type RideRequestResult,
+  type RideStatus,
   type Zone,
 } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +24,13 @@ interface QuoteSelection {
   destinationZoneId: string;
   seatsRequested: number;
 }
+
+const ACTIVE_RIDE_STATUSES: RideStatus[] = [
+  "REQUESTED",
+  "MATCHED",
+  "DRIVER_ARRIVED",
+  "STARTED",
+];
 
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat("en-BD", {
@@ -44,10 +54,13 @@ export default function RideRequestPanel({
     null,
   );
   const [ride, setRide] = useState<RideRequestResult | null>(null);
+  const [passengerRides, setPassengerRides] = useState<PassengerRide[]>([]);
   const [zoneError, setZoneError] = useState("");
+  const [ridesError, setRidesError] = useState("");
   const [estimateError, setEstimateError] = useState("");
   const [requestError, setRequestError] = useState("");
   const [isLoadingZones, setIsLoadingZones] = useState(true);
+  const [isLoadingRides, setIsLoadingRides] = useState(true);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const quoteSequence = useRef(0);
@@ -77,6 +90,31 @@ export default function RideRequestPanel({
     };
   }, []);
 
+  useEffect(() => {
+    let isCurrent = true;
+
+    getMyRideRequests(token)
+      .then((rides) => {
+        if (isCurrent) setPassengerRides(rides);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setRidesError(
+            error instanceof Error
+              ? error.message
+              : "Could not load your ride requests.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingRides(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [token]);
+
   const routeIsValid =
     originZoneId !== "" &&
     destinationZoneId !== "" &&
@@ -86,6 +124,9 @@ export default function RideRequestPanel({
     quotedSelection?.originZoneId === originZoneId &&
     quotedSelection.destinationZoneId === destinationZoneId &&
     quotedSelection.seatsRequested === seatsRequested;
+  const activeRide = passengerRides.find((item) =>
+    ACTIVE_RIDE_STATUSES.includes(item.status),
+  );
 
   function clearQuote() {
     quoteSequence.current += 1;
@@ -204,6 +245,70 @@ export default function RideRequestPanel({
           Your fare is estimated before pooling. A shared ride may cost less
           depending on how many seats are occupied.
         </p>
+      </section>
+    );
+  }
+
+  if (isLoadingRides) {
+    return (
+      <section className="ride-content" aria-live="polite">
+        <div className="ride-loading">Checking your active ride...</div>
+      </section>
+    );
+  }
+
+  if (ridesError) {
+    return (
+      <section className="ride-content" aria-labelledby="rides-error-heading">
+        <p className="eyebrow">PASSENGER / YOUR RIDES</p>
+        <h1 id="rides-error-heading">Your ride list is unavailable.</h1>
+        <p className="ride-intro" role="alert">
+          {ridesError}
+        </p>
+        <button
+          className="estimate-button"
+          type="button"
+          onClick={() => window.location.reload()}
+        >
+          Reload
+        </button>
+      </section>
+    );
+  }
+
+  if (activeRide) {
+    return (
+      <section className="ride-content" aria-labelledby="active-ride-heading">
+        <p className="eyebrow">PASSENGER / ACTIVE RIDE</p>
+        <h1 id="active-ride-heading">Your request is underway.</h1>
+        <p className="ride-intro">
+          We found your existing ride request. Complete it before requesting
+          another ride.
+        </p>
+        <div className="active-ride-summary">
+          <div>
+            <span className="ride-detail-label">ROUTE</span>
+            <strong>
+              {activeRide.originZone.name} to {activeRide.destinationZone.name}
+            </strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">STATUS</span>
+            <strong className="status-requested">
+              {activeRide.status.replaceAll("_", " ")}
+            </strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">SEATS</span>
+            <strong>{activeRide.seatsRequested}</strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">PAYMENT</span>
+            <strong>
+              {activeRide.paymentMethod === "CASH" ? "Cash" : "TeslaPay wallet"}
+            </strong>
+          </div>
+        </div>
       </section>
     );
   }
