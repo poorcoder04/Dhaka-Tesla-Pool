@@ -3,15 +3,24 @@
 import {
   ApiError,
   acceptRideRequest,
+  arriveAtPickup,
+  cancelTrip,
+  collectPayment,
+  completeTrip,
   getActivePool,
   getMyVehicles,
   getOpenRideRequests,
+  getPaymentForRide,
   getPoolHistory,
   getPoolTimeline,
   setDriverStatus,
+  startTrip,
   type ActivePool,
+  type DriverPayment,
+  type LifecyclePool,
   type OpenRideRequest,
   type PoolHistoryEntry,
+  type PoolMember,
   type PoolTimelineEntry,
   type Vehicle,
 } from "@/lib/api";
@@ -24,6 +33,14 @@ interface DriverPanelProps {
 
 type DriverView = "dashboard" | "history";
 
+function formatMoney(amount: number | string): string {
+  return new Intl.NumberFormat("en-BD", {
+    style: "currency",
+    currency: "BDT",
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
+}
+
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-BD", {
     dateStyle: "medium",
@@ -31,27 +48,30 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-// ── Status badge ─────────────────────────────────────────────────────────────
+// ── Status badge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
   const label = status.replaceAll("_", " ");
   const cls =
-    status === "OPEN"
-      ? "badge-open"
-      : status === "DRIVER_ARRIVED"
-        ? "badge-arrived"
-        : status === "STARTED"
-          ? "badge-started"
-          : status === "COMPLETED"
-            ? "badge-completed"
-            : status === "CANCELLED"
-              ? "badge-cancelled"
-              : status === "REQUESTED"
-                ? "badge-requested"
-                : status === "MATCHED"
-                  ? "badge-matched"
-                  : "";
+    status === "OPEN" ? "badge-open"
+    : status === "DRIVER_ARRIVED" ? "badge-arrived"
+    : status === "STARTED" ? "badge-started"
+    : status === "COMPLETED" ? "badge-completed"
+    : status === "CANCELLED" ? "badge-cancelled"
+    : status === "REQUESTED" ? "badge-requested"
+    : status === "MATCHED" ? "badge-matched"
+    : "";
   return <span className={`driver-badge ${cls}`}>{label}</span>;
+}
+
+// ── Payment status chip ───────────────────────────────────────────────────────
+
+function PaymentChip({ status }: { status: "PENDING" | "PAID" | "FAILED" }) {
+  const cls =
+    status === "PAID" ? "payment-chip-paid"
+    : status === "FAILED" ? "payment-chip-failed"
+    : "payment-chip-pending";
+  return <span className={`payment-chip ${cls}`}>{status}</span>;
 }
 
 // ── Online toggle ─────────────────────────────────────────────────────────────
@@ -73,9 +93,7 @@ function OnlineToggle({ token, isOnline, onChange }: OnlineToggleProps) {
       const result = await setDriverStatus(token, !isOnline);
       onChange(result.isOnline);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not update your status.",
-      );
+      setError(err instanceof Error ? err.message : "Could not update your status.");
     } finally {
       setIsToggling(false);
     }
@@ -106,11 +124,7 @@ function OnlineToggle({ token, isOnline, onChange }: OnlineToggleProps) {
       >
         {isToggling ? "Updating..." : isOnline ? "Go offline" : "Go online"}
       </button>
-      {error && (
-        <p className="driver-inline-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p className="driver-inline-error" role="alert">{error}</p>}
     </div>
   );
 }
@@ -126,17 +140,8 @@ interface AcceptModalProps {
   onClose: () => void;
 }
 
-function AcceptModal({
-  token,
-  ride,
-  vehicles,
-  hasActivePool,
-  onAccepted,
-  onClose,
-}: AcceptModalProps) {
-  const [selectedVehicleId, setSelectedVehicleId] = useState(
-    vehicles[0]?.id ?? "",
-  );
+function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose }: AcceptModalProps) {
+  const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -148,37 +153,21 @@ function AcceptModal({
       const result = await acceptRideRequest(token, ride.id, selectedVehicleId);
       onAccepted(result.pool);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not accept this ride.",
-      );
+      setError(err instanceof Error ? err.message : "Could not accept this ride.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div
-      className="driver-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="accept-modal-heading"
-    >
+    <div className="driver-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="accept-modal-heading">
       <div className="driver-modal">
         <div className="driver-modal-header">
           <div>
             <p className="eyebrow">ACCEPT RIDE REQUEST</p>
-            <h2 id="accept-modal-heading">
-              {ride.originZone.name} → {ride.destinationZone.name}
-            </h2>
+            <h2 id="accept-modal-heading">{ride.originZone.name} → {ride.destinationZone.name}</h2>
           </div>
-          <button
-            className="driver-modal-close"
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <button className="driver-modal-close" type="button" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         <div className="driver-modal-details">
@@ -188,9 +177,7 @@ function AcceptModal({
           </div>
           <div>
             <span className="ride-detail-label">PAYMENT</span>
-            <strong>
-              {ride.paymentMethod === "CASH" ? "Cash" : "TeslaPay wallet"}
-            </strong>
+            <strong>{ride.paymentMethod === "CASH" ? "Cash" : "TeslaPay wallet"}</strong>
           </div>
           <div>
             <span className="ride-detail-label">REQUESTED</span>
@@ -207,9 +194,7 @@ function AcceptModal({
 
         {!hasActivePool && vehicles.length > 1 && (
           <div className="driver-modal-vehicle">
-            <label className="field-label" htmlFor="vehicle-select">
-              Select vehicle
-            </label>
+            <label className="field-label" htmlFor="vehicle-select">Select vehicle</label>
             <select
               id="vehicle-select"
               value={selectedVehicleId}
@@ -228,23 +213,16 @@ function AcceptModal({
           <div className="driver-modal-vehicle-note">
             <span className="ride-detail-label">VEHICLE</span>
             <strong>
-              {vehicles[0]!.name} — {vehicles[0]!.plateNumber} (
-              {vehicles[0]!.seatCapacity} seats)
+              {vehicles[0]!.name} — {vehicles[0]!.plateNumber} ({vehicles[0]!.seatCapacity} seats)
             </strong>
           </div>
         )}
 
         {vehicles.length === 0 && (
-          <p className="driver-inline-error">
-            You have no active vehicles. Register a vehicle first.
-          </p>
+          <p className="driver-inline-error">You have no active vehicles. Register a vehicle first.</p>
         )}
 
-        {error && (
-          <p className="driver-inline-error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <p className="driver-inline-error" role="alert">{error}</p>}
 
         <div className="driver-modal-actions">
           <button
@@ -279,12 +257,7 @@ interface OpenRequestsListProps {
   onAccepted: (pool: ActivePool) => void;
 }
 
-function OpenRequestsList({
-  token,
-  vehicles,
-  hasActivePool,
-  onAccepted,
-}: OpenRequestsListProps) {
+function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRequestsListProps) {
   const [rides, setRides] = useState<OpenRideRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -292,19 +265,13 @@ function OpenRequestsList({
   const [pendingRide, setPendingRide] = useState<OpenRideRequest | null>(null);
 
   async function loadRides(showRefresh = false) {
-    if (showRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+    if (showRefresh) setIsRefreshing(true);
     setError("");
     try {
       const data = await getOpenRideRequests(token);
       setRides(data);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not load ride requests.",
-      );
+      setError(err instanceof Error ? err.message : "Could not load ride requests.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -329,11 +296,7 @@ function OpenRequestsList({
   }
 
   if (isLoading) {
-    return (
-      <div className="driver-section">
-        <div className="driver-loading">Loading open ride requests...</div>
-      </div>
-    );
+    return <div className="driver-section"><div className="driver-loading">Loading open ride requests...</div></div>;
   }
 
   if (error) {
@@ -341,13 +304,7 @@ function OpenRequestsList({
       <div className="driver-section">
         <div className="driver-error-row">
           <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => void loadRides()}
-            className="driver-text-action"
-          >
-            Retry
-          </button>
+          <button type="button" onClick={() => void loadRides()} className="driver-text-action">Retry</button>
         </div>
       </div>
     );
@@ -371,43 +328,23 @@ function OpenRequestsList({
       </div>
 
       {rides.length === 0 ? (
-        <div className="driver-empty">
-          No open ride requests right now. Check back in a moment.
-        </div>
+        <div className="driver-empty">No open ride requests right now. Check back in a moment.</div>
       ) : (
         <ul className="driver-request-list">
           {rides.map((ride) => (
             <li className="driver-request-card" key={ride.id}>
               <div className="driver-request-route">
-                <span className="driver-request-zone">
-                  {ride.originZone.name}
-                </span>
+                <span className="driver-request-zone">{ride.originZone.name}</span>
                 <span className="driver-route-arrow" aria-hidden="true" />
-                <span className="driver-request-zone">
-                  {ride.destinationZone.name}
-                </span>
+                <span className="driver-request-zone">{ride.destinationZone.name}</span>
               </div>
               <div className="driver-request-meta">
-                <span>
-                  <span className="ride-detail-label">SEATS </span>
-                  {ride.seatsRequested}
-                </span>
-                <span>
-                  <span className="ride-detail-label">PAYMENT </span>
-                  {ride.paymentMethod === "CASH" ? "Cash" : "TeslaPay"}
-                </span>
-                <span>
-                  <span className="ride-detail-label">REQUESTED </span>
-                  {formatDate(ride.requestedAt)}
-                </span>
+                <span><span className="ride-detail-label">SEATS </span>{ride.seatsRequested}</span>
+                <span><span className="ride-detail-label">PAYMENT </span>{ride.paymentMethod === "CASH" ? "Cash" : "TeslaPay"}</span>
+                <span><span className="ride-detail-label">REQUESTED </span>{formatDate(ride.requestedAt)}</span>
               </div>
-              <button
-                className="driver-accept-card-button"
-                type="button"
-                onClick={() => setPendingRide(ride)}
-              >
-                Accept
-                <span aria-hidden="true">→</span>
+              <button className="driver-accept-card-button" type="button" onClick={() => setPendingRide(ride)}>
+                Accept<span aria-hidden="true">→</span>
               </button>
             </li>
           ))}
@@ -428,6 +365,217 @@ function OpenRequestsList({
   );
 }
 
+// ── Passenger payment card ────────────────────────────────────────────────────
+// Loaded lazily after the trip completes so we don't call getPaymentForRide
+// during an active trip (payment record doesn't exist yet until completeTrip).
+
+interface PassengerPaymentProps {
+  token: string;
+  member: PoolMember;
+  poolCompleted: boolean;
+}
+
+function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPaymentProps) {
+  const [payment, setPayment] = useState<DriverPayment | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [isCollecting, setIsCollecting] = useState(false);
+  const [collectError, setCollectError] = useState("");
+
+  useEffect(() => {
+    if (!poolCompleted) return;
+    let isCurrent = true;
+    getPaymentForRide(token, member.rideRequest.id)
+      .then((p) => { if (isCurrent) { setPayment(p); setIsLoading(false); } })
+      .catch((err: unknown) => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : "Could not load payment.");
+          setIsLoading(false);
+        }
+      });
+    return () => { isCurrent = false; };
+  }, [poolCompleted, member.rideRequest.id, token]);
+
+  async function handleCollect() {
+    if (!payment) return;
+    setIsCollecting(true);
+    setCollectError("");
+    try {
+      const updated = await collectPayment(token, payment.id);
+      setPayment(updated);
+    } catch (err) {
+      setCollectError(err instanceof Error ? err.message : "Could not collect payment.");
+    } finally {
+      setIsCollecting(false);
+    }
+  }
+
+  if (!poolCompleted) return null;
+
+  if (isLoading) return <div className="passenger-payment-loading">Loading fare...</div>;
+  if (error) return <p className="driver-inline-error">{error}</p>;
+  if (!payment) return null;
+
+  const canCollect =
+    payment.method === "CASH" && payment.status === "PENDING";
+
+  return (
+    <div className="passenger-payment-row">
+      <div className="passenger-fare">
+        <span className="ride-detail-label">FARE</span>
+        <strong>{formatMoney(payment.amount)}</strong>
+      </div>
+      <div className="passenger-payment-method">
+        <span className="ride-detail-label">METHOD</span>
+        <span>{payment.method === "CASH" ? "Cash" : "TeslaPay"}</span>
+      </div>
+      <div className="passenger-payment-status">
+        <span className="ride-detail-label">PAYMENT</span>
+        <PaymentChip status={payment.status} />
+      </div>
+      {canCollect && (
+        <button
+          className="collect-cash-button"
+          type="button"
+          onClick={handleCollect}
+          disabled={isCollecting}
+        >
+          {isCollecting ? "Collecting..." : "Collect cash"}
+        </button>
+      )}
+      {collectError && <p className="driver-inline-error collect-error">{collectError}</p>}
+    </div>
+  );
+}
+
+// ── Lifecycle actions ─────────────────────────────────────────────────────────
+
+interface LifecycleActionsProps {
+  token: string;
+  pool: ActivePool;
+  onPoolUpdated: (pool: ActivePool | null) => void;
+  onError: (msg: string) => void;
+}
+
+function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActionsProps) {
+  const [isBusy, setIsBusy] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  async function runAction(action: () => Promise<LifecyclePool>) {
+    setIsBusy(true);
+    onError("");
+    try {
+      const updated = await action();
+      // COMPLETED and CANCELLED pools are no longer "active" —
+      // pass them up so the parent can move the pool out of the active slot
+      // while still rendering the final state (parent decides).
+      onPoolUpdated(updated);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Action failed. Try again.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  const status = pool.status;
+
+  return (
+    <div className="lifecycle-actions">
+      <p className="eyebrow">TRIP ACTIONS</p>
+
+      <div className="lifecycle-buttons">
+        {/* OPEN → arrive */}
+        {status === "OPEN" && (
+          <button
+            className="lifecycle-btn lifecycle-btn-arrive"
+            type="button"
+            disabled={isBusy}
+            onClick={() => void runAction(() => arriveAtPickup(token, pool.id))}
+          >
+            {isBusy ? "Updating..." : "Mark arrived at pickup"}
+          </button>
+        )}
+
+        {/* DRIVER_ARRIVED → start */}
+        {status === "DRIVER_ARRIVED" && (
+          <button
+            className="lifecycle-btn lifecycle-btn-start"
+            type="button"
+            disabled={isBusy}
+            onClick={() => void runAction(() => startTrip(token, pool.id))}
+          >
+            {isBusy ? "Starting..." : "Start trip"}
+          </button>
+        )}
+
+        {/* STARTED → complete */}
+        {status === "STARTED" && (
+          <button
+            className="lifecycle-btn lifecycle-btn-complete"
+            type="button"
+            disabled={isBusy}
+            onClick={() => void runAction(() => completeTrip(token, pool.id))}
+          >
+            {isBusy ? "Completing..." : "Complete trip"}
+          </button>
+        )}
+
+        {/* Cancel available while OPEN or DRIVER_ARRIVED */}
+        {(status === "OPEN" || status === "DRIVER_ARRIVED") && !confirmCancel && (
+          <button
+            className="lifecycle-btn lifecycle-btn-cancel-trigger"
+            type="button"
+            disabled={isBusy}
+            onClick={() => setConfirmCancel(true)}
+          >
+            Cancel trip
+          </button>
+        )}
+      </div>
+
+      {/* Cancel confirmation */}
+      {confirmCancel && (
+        <div className="lifecycle-cancel-confirm" role="group" aria-label="Confirm trip cancellation">
+          <div>
+            <strong>Cancel this trip?</strong>
+            <p>All matched passengers will be notified.</p>
+          </div>
+          <input
+            className="lifecycle-cancel-reason"
+            type="text"
+            placeholder="Reason (optional)"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+          />
+          <div className="lifecycle-cancel-actions">
+            <button
+              className="lifecycle-btn lifecycle-btn-cancel-confirm"
+              type="button"
+              disabled={isBusy}
+              onClick={() =>
+                void runAction(() =>
+                  cancelTrip(token, pool.id, cancelReason || undefined),
+                )
+              }
+            >
+              {isBusy ? "Cancelling..." : "Confirm cancel"}
+            </button>
+            <button
+              className="lifecycle-btn lifecycle-btn-keep"
+              type="button"
+              disabled={isBusy}
+              onClick={() => { setConfirmCancel(false); setCancelReason(""); }}
+            >
+              Keep trip
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Active pool view ──────────────────────────────────────────────────────────
 
 interface ActivePoolViewProps {
@@ -437,60 +585,66 @@ interface ActivePoolViewProps {
 }
 
 function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
-  const [timeline, setTimeline] = useState<PoolTimelineEntry[]>([]);
+  // localPool overrides the parent prop after a lifecycle action fires —
+  // avoids a useEffect sync which triggers the set-state-in-effect lint rule.
+  const [localPool, setLocalPool] = useState<ActivePool | null>(null);
+  const currentPool = localPool ?? pool;const [timeline, setTimeline] = useState<PoolTimelineEntry[]>([]);
   const [isLoadingTimeline, setIsLoadingTimeline] = useState(true);
   const [timelineError, setTimelineError] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [actionError, setActionError] = useState("");
+
 
   useEffect(() => {
     let isCurrent = true;
-
-    getPoolTimeline(token, pool.id)
+    getPoolTimeline(token, currentPool.id)
       .then((entries) => {
-        if (isCurrent) {
-          setTimeline(entries);
-          setIsLoadingTimeline(false);
-        }
+        if (isCurrent) { setTimeline(entries); setIsLoadingTimeline(false); }
       })
       .catch((err: unknown) => {
         if (isCurrent) {
-          setTimelineError(
-            err instanceof Error
-              ? err.message
-              : "Could not load trip timeline.",
-          );
+          setTimelineError(err instanceof Error ? err.message : "Could not load trip timeline.");
           setIsLoadingTimeline(false);
         }
       });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [pool.id, token]);
+    return () => { isCurrent = false; };
+  }, [currentPool.id, token]);
 
   async function handleRefresh() {
     setIsRefreshing(true);
+    setActionError("");
     try {
       const fresh = await getActivePool(token).catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 404) return null;
         throw err;
       });
-      onPoolUpdated(fresh);
       if (fresh) {
+        setLocalPool(fresh);
         const entries = await getPoolTimeline(token, fresh.id);
         setTimeline(entries);
       }
+      onPoolUpdated(fresh);
     } catch (err) {
-      setTimelineError(
-        err instanceof Error ? err.message : "Could not refresh trip status.",
-      );
+      setTimelineError(err instanceof Error ? err.message : "Could not refresh trip status.");
     } finally {
       setIsRefreshing(false);
     }
   }
 
-  const liveMembers = pool.memberships.filter((m) =>
-    ["MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(m.rideRequest.status),
+  function handleLifecycleUpdate(updated: ActivePool | null) {
+    if (updated) {
+      setLocalPool(updated);
+      // Reload timeline to reflect the new status event
+      getPoolTimeline(token, updated.id)
+        .then(setTimeline)
+        .catch(() => { /* non-critical */ });
+    }
+    onPoolUpdated(updated);
+  }
+
+  const isTerminal = currentPool.status === "COMPLETED" || currentPool.status === "CANCELLED";
+  const liveMembers = currentPool.memberships.filter((m) =>
+    ["MATCHED", "DRIVER_ARRIVED", "STARTED", "COMPLETED"].includes(m.rideRequest.status),
   );
 
   return (
@@ -499,12 +653,10 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       <div className="driver-section-heading">
         <div>
           <p className="eyebrow">DRIVER / ACTIVE TRIP</p>
-          <h2>
-            {pool.originZone.name} → {pool.destinationZone.name}
-          </h2>
+          <h2>{currentPool.originZone.name} → {currentPool.destinationZone.name}</h2>
         </div>
         <div className="driver-heading-right">
-          <StatusBadge status={pool.status} />
+          <StatusBadge status={currentPool.status} />
           <button
             className="refresh-status-button"
             type="button"
@@ -520,28 +672,42 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       <div className="driver-seat-summary">
         <div className="driver-seat-card">
           <span className="ride-detail-label">VEHICLE</span>
-          <strong>{pool.vehicle.name}</strong>
-          <small>{pool.vehicle.plateNumber}</small>
+          <strong>{currentPool.vehicle.name}</strong>
+          <small>{currentPool.vehicle.plateNumber}</small>
         </div>
         <div className="driver-seat-card">
           <span className="ride-detail-label">TOTAL SEATS</span>
-          <strong>{pool.maxSeats}</strong>
+          <strong>{currentPool.maxSeats}</strong>
         </div>
         <div className="driver-seat-card driver-seat-card-occupied">
           <span className="ride-detail-label">OCCUPIED</span>
-          <strong>{pool.occupiedSeats}</strong>
+          <strong>{currentPool.occupiedSeats}</strong>
         </div>
         <div className="driver-seat-card">
           <span className="ride-detail-label">AVAILABLE</span>
-          <strong>{pool.availableSeats}</strong>
+          <strong>{currentPool.availableSeats}</strong>
         </div>
       </div>
+
+      {/* Lifecycle action buttons — not shown for terminal states */}
+      {!isTerminal && (
+        <LifecycleActions
+          token={token}
+          pool={currentPool}
+          onPoolUpdated={handleLifecycleUpdate}
+          onError={setActionError}
+        />
+      )}
+
+      {actionError && (
+        <p className="driver-inline-error" role="alert">{actionError}</p>
+      )}
 
       {/* Passenger list */}
       <div className="driver-passengers">
         <p className="eyebrow">PASSENGERS IN THIS TRIP</p>
         {liveMembers.length === 0 ? (
-          <div className="driver-empty">No active passengers in this trip.</div>
+          <div className="driver-empty">No passengers in this trip.</div>
         ) : (
           <ul className="driver-passenger-list">
             {liveMembers.map((member) => (
@@ -553,8 +719,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                 <div className="driver-passenger-route">
                   <span className="ride-detail-label">ROUTE</span>
                   <span>
-                    {member.rideRequest.originZone.name} →{" "}
-                    {member.rideRequest.destinationZone.name}
+                    {member.rideRequest.originZone.name} → {member.rideRequest.destinationZone.name}
                   </span>
                 </div>
                 <div className="driver-passenger-seats">
@@ -562,6 +727,12 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                   <strong>{member.seatsTaken}</strong>
                 </div>
                 <StatusBadge status={member.rideRequest.status} />
+                {/* Fare + payment shown after trip completes */}
+                <PassengerPaymentCard
+                  token={token}
+                  member={member}
+                  poolCompleted={isTerminal}
+                />
               </li>
             ))}
           </ul>
@@ -574,9 +745,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
         {isLoadingTimeline ? (
           <div className="driver-loading">Loading timeline...</div>
         ) : timelineError ? (
-          <p className="driver-inline-error" role="alert">
-            {timelineError}
-          </p>
+          <p className="driver-inline-error" role="alert">{timelineError}</p>
         ) : timeline.length === 0 ? (
           <div className="driver-empty">No events recorded yet.</div>
         ) : (
@@ -594,9 +763,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                         ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
                         : String(entry.status).replaceAll("_", " ")}
                     </strong>
-                    <time dateTime={entry.createdAt}>
-                      {formatDate(entry.createdAt)}
-                    </time>
+                    <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
                   </div>
                   {entry.note && <p>{entry.note}</p>}
                 </div>
@@ -620,42 +787,24 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loadingTimelineId, setLoadingTimelineId] = useState<string | null>(
-    null,
-  );
-  const [loadedTimeline, setLoadedTimeline] = useState<{
-    poolId: string;
-    entries: PoolTimelineEntry[];
-  } | null>(null);
+  const [loadingTimelineId, setLoadingTimelineId] = useState<string | null>(null);
+  const [loadedTimeline, setLoadedTimeline] = useState<{ poolId: string; entries: PoolTimelineEntry[] } | null>(null);
   const [timelineError, setTimelineError] = useState<string | null>(null);
   const seq = useRef(0);
 
   useEffect(() => {
     let isCurrent = true;
     getPoolHistory(token)
-      .then((data) => {
-        if (isCurrent) setPools(data);
-      })
+      .then((data) => { if (isCurrent) setPools(data); })
       .catch((err: unknown) => {
-        if (isCurrent)
-          setError(
-            err instanceof Error ? err.message : "Could not load trip history.",
-          );
+        if (isCurrent) setError(err instanceof Error ? err.message : "Could not load trip history.");
       })
-      .finally(() => {
-        if (isCurrent) setIsLoading(false);
-      });
-    return () => {
-      isCurrent = false;
-    };
+      .finally(() => { if (isCurrent) setIsLoading(false); });
+    return () => { isCurrent = false; };
   }, [token]);
 
   async function toggleTimeline(poolId: string) {
-    if (expandedId === poolId) {
-      seq.current += 1;
-      setExpandedId(null);
-      return;
-    }
+    if (expandedId === poolId) { seq.current += 1; setExpandedId(null); return; }
     const s = ++seq.current;
     setExpandedId(poolId);
     setLoadingTimelineId(poolId);
@@ -665,22 +814,14 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
       if (seq.current === s) setLoadedTimeline({ poolId, entries });
     } catch (err) {
       if (seq.current === s)
-        setTimelineError(
-          err instanceof Error ? err.message : "Could not load timeline.",
-        );
+        setTimelineError(err instanceof Error ? err.message : "Could not load timeline.");
     } finally {
       if (seq.current === s) setLoadingTimelineId(null);
     }
   }
 
-  if (isLoading)
-    return <div className="driver-loading">Loading trip history...</div>;
-  if (error)
-    return (
-      <p className="driver-inline-error" role="alert">
-        {error}
-      </p>
-    );
+  if (isLoading) return <div className="driver-loading">Loading trip history...</div>;
+  if (error) return <p className="driver-inline-error" role="alert">{error}</p>;
 
   return (
     <div className="driver-section">
@@ -693,15 +834,12 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
       </div>
 
       {pools.length === 0 ? (
-        <div className="driver-empty">
-          Completed and cancelled trips will appear here.
-        </div>
+        <div className="driver-empty">Completed and cancelled trips will appear here.</div>
       ) : (
         <ul className="driver-history-list">
           {pools.map((pool) => {
             const isExpanded = expandedId === pool.id;
-            const tl =
-              loadedTimeline?.poolId === pool.id ? loadedTimeline : null;
+            const tl = loadedTimeline?.poolId === pool.id ? loadedTimeline : null;
             return (
               <li className="driver-history-item" key={pool.id}>
                 <button
@@ -711,20 +849,15 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                   onClick={() => void toggleTimeline(pool.id)}
                 >
                   <span className="driver-history-route">
-                    <strong>
-                      {pool.originZone.name} → {pool.destinationZone.name}
-                    </strong>
+                    <strong>{pool.originZone.name} → {pool.destinationZone.name}</strong>
                     <small>
-                      {formatDate(pool.createdAt)} /{" "}
-                      {pool.vehicle.name} /{" "}
+                      {formatDate(pool.createdAt)} / {pool.vehicle.name} /{" "}
                       {pool.maxSeats - pool.availableSeats} passenger
                       {pool.maxSeats - pool.availableSeats !== 1 ? "s" : ""}
                     </small>
                   </span>
                   <StatusBadge status={pool.status} />
-                  <span className="history-toggle-label">
-                    {isExpanded ? "Hide" : "View timeline"}
-                  </span>
+                  <span className="history-toggle-label">{isExpanded ? "Hide" : "View timeline"}</span>
                 </button>
 
                 {isExpanded && (
@@ -748,9 +881,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                                     ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
                                     : String(entry.status).replaceAll("_", " ")}
                                 </strong>
-                                <time dateTime={entry.createdAt}>
-                                  {formatDate(entry.createdAt)}
-                                </time>
+                                <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
                               </div>
                               {entry.note && <p>{entry.note}</p>}
                             </div>
@@ -778,22 +909,14 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activePool, setActivePool] = useState<ActivePool | null>(null);
   const [view, setView] = useState<DriverView>("dashboard");
-
-  // Loading/error state for the initial data fetch
   const [isBooting, setIsBooting] = useState(true);
   const [bootError, setBootError] = useState("");
 
-  // On mount: load vehicles + check for an existing active pool in parallel.
-  // We don't block on isOnline — the driver may have been online in a previous
-  // session; the backend is the source of truth, so we show offline by default
-  // and let them toggle to reflect reality.
   useEffect(() => {
     let isCurrent = true;
-
     Promise.all([
       getMyVehicles(token),
       getActivePool(token).catch((err: unknown) => {
-        // 404 just means no active trip — that's normal
         if (err instanceof ApiError && err.status === 404) return null;
         throw err;
       }),
@@ -802,25 +925,14 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
         if (!isCurrent) return;
         setVehicles(vehicleList);
         setActivePool(pool);
-        // If they have an active trip they must be online
         if (pool) setIsOnline(true);
       })
       .catch((err: unknown) => {
-        if (isCurrent) {
-          setBootError(
-            err instanceof Error
-              ? err.message
-              : "Could not load driver data. Check the API and reload.",
-          );
-        }
+        if (isCurrent)
+          setBootError(err instanceof Error ? err.message : "Could not load driver data. Check the API and reload.");
       })
-      .finally(() => {
-        if (isCurrent) setIsBooting(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
+      .finally(() => { if (isCurrent) setIsBooting(false); });
+    return () => { isCurrent = false; };
   }, [token]);
 
   if (isBooting) {
@@ -836,13 +948,7 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
       <section className="driver-workspace">
         <div className="driver-error-row">
           <span>{bootError}</span>
-          <button
-            type="button"
-            className="driver-text-action"
-            onClick={() => window.location.reload()}
-          >
-            Reload
-          </button>
+          <button type="button" className="driver-text-action" onClick={() => window.location.reload()}>Reload</button>
         </div>
       </section>
     );
@@ -850,7 +956,6 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
 
   return (
     <section className="driver-workspace" aria-labelledby="driver-heading">
-      {/* Header */}
       <div className="driver-header">
         <div>
           <p className="eyebrow">DRIVER WORKSPACE</p>
@@ -882,14 +987,8 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
         <PoolHistoryList token={token} />
       ) : (
         <>
-          {/* Online/offline toggle */}
-          <OnlineToggle
-            token={token}
-            isOnline={isOnline}
-            onChange={setIsOnline}
-          />
+          <OnlineToggle token={token} isOnline={isOnline} onChange={setIsOnline} />
 
-          {/* Active trip takes priority over the request list */}
           {activePool ? (
             <ActivePoolView
               token={token}
@@ -904,9 +1003,7 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
               token={token}
               vehicles={vehicles}
               hasActivePool={false}
-              onAccepted={(pool) => {
-                setActivePool(pool);
-              }}
+              onAccepted={(pool) => setActivePool(pool)}
             />
           ) : (
             <div className="driver-offline-hint">

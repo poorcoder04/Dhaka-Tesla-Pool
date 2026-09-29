@@ -9,7 +9,9 @@ import {
   getRideRequestHistory,
   getRidePayment,
   getMyRideRequests,
+  getWalletBalance,
   getZones,
+  topupWallet,
   type FareEstimate,
   type PaymentMethod,
   type PassengerRide,
@@ -18,6 +20,7 @@ import {
   type RideHistoryEntry,
   type RideRequestResult,
   type RideStatus,
+  type WalletBalance,
   type Zone,
 } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
@@ -59,6 +62,105 @@ function loadRideTracking(token: string, rideRequestId: string) {
     getRideRequest(token, rideRequestId),
     getRideRequestHistory(token, rideRequestId),
   ]);
+}
+
+// ── Wallet panel ─────────────────────────────────────────────────────────────
+
+function WalletPanel({ token }: { token: string }) {
+  const [wallet, setWallet] = useState<WalletBalance | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [topupAmount, setTopupAmount] = useState("");
+  const [isTopingUp, setIsTopingUp] = useState(false);
+  const [topupError, setTopupError] = useState("");
+  const [showTopup, setShowTopup] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+    getWalletBalance(token)
+      .then((data) => { if (isCurrent) { setWallet(data); setIsLoading(false); } })
+      .catch((err: unknown) => {
+        if (isCurrent) {
+          setError(err instanceof Error ? err.message : "Could not load wallet.");
+          setIsLoading(false);
+        }
+      });
+    return () => { isCurrent = false; };
+  }, [token]);
+
+  async function handleTopup(e: React.FormEvent) {
+    e.preventDefault();
+    const amount = Number(topupAmount);
+    if (!amount || amount <= 0) { setTopupError("Enter a positive amount."); return; }
+    setIsTopingUp(true);
+    setTopupError("");
+    try {
+      const result = await topupWallet(token, amount);
+      setWallet((prev) => prev ? { ...prev, walletBalance: result.walletBalance } : prev);
+      setTopupAmount("");
+      setShowTopup(false);
+    } catch (err) {
+      setTopupError(err instanceof Error ? err.message : "Topup failed.");
+    } finally {
+      setIsTopingUp(false);
+    }
+  }
+
+  if (isLoading) return null; // silent — don't block the booking form
+  if (error) return null;     // non-critical, don't show an error wall
+
+  return (
+    <div className="wallet-panel">
+      <div className="wallet-balance-row">
+        <div className="wallet-balance-info">
+          <span className="ride-detail-label">TESLAPAY WALLET</span>
+          <strong className="wallet-amount">
+            ৳{Number(wallet?.walletBalance ?? 0).toFixed(2)}
+          </strong>
+        </div>
+        <button
+          className="wallet-topup-trigger"
+          type="button"
+          onClick={() => { setShowTopup((s) => !s); setTopupError(""); }}
+        >
+          {showTopup ? "Cancel" : "Add money"}
+        </button>
+      </div>
+
+      {showTopup && (
+        <form className="wallet-topup-form" onSubmit={(e) => void handleTopup(e)}>
+          <label className="field-label" htmlFor="topup-amount">
+            Amount (BDT)
+          </label>
+          <div className="wallet-topup-row">
+            <input
+              id="topup-amount"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="e.g. 200"
+              value={topupAmount}
+              onChange={(e) => setTopupAmount(e.target.value)}
+              required
+            />
+            <button
+              className="wallet-topup-submit"
+              type="submit"
+              disabled={isTopingUp}
+            >
+              {isTopingUp ? "Adding..." : "Add"}
+            </button>
+          </div>
+          {topupError && (
+            <p className="ride-inline-error" role="alert">{topupError}</p>
+          )}
+          <p className="wallet-topup-note">
+            Simulated TeslaPay wallet — no real payment processed.
+          </p>
+        </form>
+      )}
+    </div>
+  );
 }
 
 export default function RideRequestPanel({
@@ -607,6 +709,8 @@ export default function RideRequestPanel({
         </div>
         <span className="ride-step-mark">01 / RIDE</span>
       </div>
+
+      <WalletPanel token={token} />
 
       {isLoadingZones ? (
         <div className="ride-loading" aria-live="polite">
