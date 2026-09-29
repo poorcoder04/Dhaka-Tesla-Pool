@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
+import RideRequestPanel from "@/components/ride-request-panel";
 import {
+  ApiError,
   getCurrentUser,
   login,
   signup,
-  ApiError,
   type SessionUser,
   type UserRole,
 } from "@/lib/api";
+import Link from "next/link";
+import { useEffect, useState, type FormEvent } from "react";
 
 type FormMode = "login" | "signup";
 
@@ -22,6 +23,7 @@ export default function AuthPortal() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [sessionToken, setSessionToken] = useState("");
   const [isRestoring, setIsRestoring] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +43,10 @@ export default function AuthPortal() {
 
     getCurrentUser(token)
       .then((currentUser) => {
-        if (isCurrent) setUser(currentUser);
+        if (isCurrent) {
+          setUser(currentUser);
+          setSessionToken(token);
+        }
       })
       .catch((restoreError: unknown) => {
         if (!isCurrent) return;
@@ -99,6 +104,7 @@ export default function AuthPortal() {
 
       window.sessionStorage.setItem(SESSION_KEY, result.token);
       setUser(result.user);
+      setSessionToken(result.token);
       setPhone("");
       setPassword("");
     } catch (submissionError) {
@@ -123,6 +129,7 @@ export default function AuthPortal() {
   function signOut() {
     window.sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
+    setSessionToken("");
     setMode("login");
     setError("");
   }
@@ -130,7 +137,9 @@ export default function AuthPortal() {
   if (isRestoring) {
     return (
       <main className="loading-screen" aria-live="polite">
-        <span className="brand-mark" aria-hidden="true">D</span>
+        <span className="brand-mark" aria-hidden="true">
+          D
+        </span>
         <p>Connecting to Dhaka Tesla Pool...</p>
       </main>
     );
@@ -142,8 +151,14 @@ export default function AuthPortal() {
     return (
       <main className="workspace-screen">
         <header className="workspace-header">
-          <Link className="wordmark" href="/" aria-label="Dhaka Tesla Pool home">
-            <span className="brand-mark" aria-hidden="true">D</span>
+          <Link
+            className="wordmark"
+            href="/"
+            aria-label="Dhaka Tesla Pool home"
+          >
+            <span className="brand-mark" aria-hidden="true">
+              D
+            </span>
             <span>Dhaka Tesla Pool</span>
           </Link>
           <div className="account-actions">
@@ -153,26 +168,39 @@ export default function AuthPortal() {
             </button>
           </div>
         </header>
-        <section className="workspace-content" aria-labelledby="welcome-heading">
-          <p className="eyebrow">{roleLabel} account</p>
-          <h1 id="welcome-heading">Welcome, {user.name}.</h1>
-          <p className="workspace-copy">
-            You are signed in as a {roleLabel.toLowerCase()}.
-          </p>
-          <div className="profile-strip">
-            <div>
-              <span className="profile-label">Phone</span>
-              <strong>{user.phone}</strong>
+        {user.role === "PASSENGER" && sessionToken ? (
+          <RideRequestPanel token={sessionToken} passengerName={user.name} />
+        ) : (
+          <section
+            className="workspace-content"
+            aria-labelledby="welcome-heading"
+          >
+            <p className="eyebrow">{roleLabel} account</p>
+            <h1 id="welcome-heading">Welcome, {user.name}.</h1>
+            <p className="workspace-copy">
+              You are signed in as a {roleLabel.toLowerCase()}.
+            </p>
+            <div className="profile-strip">
+              <div>
+                <span className="profile-label">Phone</span>
+                <strong>{user.phone}</strong>
+              </div>
+              <div>
+                <span className="profile-label">Account type</span>
+                <strong>{roleLabel}</strong>
+              </div>
             </div>
-            <div>
-              <span className="profile-label">Account type</span>
-              <strong>{roleLabel}</strong>
-            </div>
+          </section>
+        )}
+        {user.role === "DRIVER" && (
+          <div className="workspace-route" aria-hidden="true">
+            <span>Banani</span>
+            <i />
+            <span>Mohakhali</span>
+            <i />
+            <span>Gulshan 1</span>
           </div>
-        </section>
-        <div className="workspace-route" aria-hidden="true">
-          <span>Banani</span><i /><span>Mohakhali</span><i /><span>Gulshan 1</span>
-        </div>
+        )}
       </main>
     );
   }
@@ -183,7 +211,9 @@ export default function AuthPortal() {
     <main className="auth-layout">
       <section className="brand-panel" aria-labelledby="brand-heading">
         <div className="brand-topline">
-          <span className="brand-mark" aria-hidden="true">D</span>
+          <span className="brand-mark" aria-hidden="true">
+            D
+          </span>
           <span className="brand-caption">DHAKA / BANANI</span>
         </div>
         <div className="brand-story">
@@ -192,7 +222,10 @@ export default function AuthPortal() {
           <p className="brand-tagline">
             Share a seat. Split the fare. Survive Dhaka traffic.
           </p>
-          <div className="route-visual" aria-label="Example routes from Banani to Mohakhali and Gulshan 1">
+          <div
+            className="route-visual"
+            aria-label="Example routes from Banani to Mohakhali and Gulshan 1"
+          >
             <div className="route-heading">
               <span>THIS MORNING</span>
               <span>3 SEATS / BULLET</span>
@@ -200,20 +233,30 @@ export default function AuthPortal() {
             <div className="route-stops">
               <div className="route-stop">
                 <span className="stop-dot" />
-                <span><small>PICKUP</small><strong>Banani</strong></span>
+                <span>
+                  <small>PICKUP</small>
+                  <strong>Banani</strong>
+                </span>
               </div>
               <div className="route-branch" />
               <div className="route-stop">
                 <span className="stop-dot stop-dot-coral" />
-                <span><small>DROP-OFF</small><strong>Mohakhali</strong></span>
+                <span>
+                  <small>DROP-OFF</small>
+                  <strong>Mohakhali</strong>
+                </span>
               </div>
               <div className="route-stop route-stop-alt">
                 <span className="stop-dot stop-dot-blue" />
-                <span><small>ALSO RIDING</small><strong>Gulshan 1</strong></span>
+                <span>
+                  <small>ALSO RIDING</small>
+                  <strong>Gulshan 1</strong>
+                </span>
               </div>
             </div>
             <div className="route-footer">
-              <span>Jashim</span><span>2 requests / 1 Tesla</span>
+              <span>Jashim</span>
+              <span>2 requests / 1 Tesla</span>
             </div>
           </div>
         </div>
@@ -237,7 +280,10 @@ export default function AuthPortal() {
               type="button"
               aria-pressed={!isSignup}
               className={!isSignup ? "mode-active" : ""}
-              onClick={() => { setMode("login"); setError(""); }}
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
             >
               Sign in
             </button>
@@ -245,7 +291,10 @@ export default function AuthPortal() {
               type="button"
               aria-pressed={isSignup}
               className={isSignup ? "mode-active" : ""}
-              onClick={() => { setMode("signup"); setError(""); }}
+              onClick={() => {
+                setMode("signup");
+                setError("");
+              }}
             >
               Create account
             </button>
@@ -254,12 +303,22 @@ export default function AuthPortal() {
           <form className="auth-form" onSubmit={handleSubmit}>
             {isSignup && (
               <>
-                <label className="field-label" htmlFor="name">Full name</label>
-                <input id="name" name="name" autoComplete="name" minLength={2} required />
+                <label className="field-label" htmlFor="name">
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  autoComplete="name"
+                  minLength={2}
+                  required
+                />
 
                 <div className="field-row">
                   <div className="field-group">
-                    <label className="field-label" htmlFor="phone">Phone number</label>
+                    <label className="field-label" htmlFor="phone">
+                      Phone number
+                    </label>
                     <input
                       id="phone"
                       name="phone"
@@ -278,36 +337,78 @@ export default function AuthPortal() {
                     <label className="field-label" htmlFor="email">
                       Email <span>Optional</span>
                     </label>
-                    <input id="email" name="email" type="email" autoComplete="email" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                    />
                   </div>
                 </div>
 
                 <span className="field-label">I am joining as</span>
-                <div className="role-switch" role="group" aria-label="Choose account type">
-                  <button type="button" aria-pressed={role === "PASSENGER"} className={role === "PASSENGER" ? "role-active" : ""} onClick={() => setRole("PASSENGER")}>Passenger</button>
-                  <button type="button" aria-pressed={role === "DRIVER"} className={role === "DRIVER" ? "role-active" : ""} onClick={() => setRole("DRIVER")}>Driver</button>
+                <div
+                  className="role-switch"
+                  role="group"
+                  aria-label="Choose account type"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={role === "PASSENGER"}
+                    className={role === "PASSENGER" ? "role-active" : ""}
+                    onClick={() => setRole("PASSENGER")}
+                  >
+                    Passenger
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={role === "DRIVER"}
+                    className={role === "DRIVER" ? "role-active" : ""}
+                    onClick={() => setRole("DRIVER")}
+                  >
+                    Driver
+                  </button>
                 </div>
 
                 {role === "DRIVER" && (
                   <fieldset className="vehicle-fields">
                     <legend>Vehicle details</legend>
-                    <label className="field-label" htmlFor="vehicleName">Vehicle name</label>
-                    <input id="vehicleName" name="vehicleName" placeholder="Bullet" required />
+                    <label className="field-label" htmlFor="vehicleName">
+                      Vehicle name
+                    </label>
+                    <input
+                      id="vehicleName"
+                      name="vehicleName"
+                      placeholder="Bullet"
+                      required
+                    />
                     <div className="field-row">
                       <div className="field-group">
-                        <label className="field-label" htmlFor="vehicleModel">Model</label>
+                        <label className="field-label" htmlFor="vehicleModel">
+                          Model
+                        </label>
                         <input id="vehicleModel" name="vehicleModel" required />
                       </div>
                       <div className="field-group">
-                        <label className="field-label" htmlFor="seatCapacity">Passenger seats</label>
-                        <select id="seatCapacity" name="seatCapacity" defaultValue="3">
+                        <label className="field-label" htmlFor="seatCapacity">
+                          Passenger seats
+                        </label>
+                        <select
+                          id="seatCapacity"
+                          name="seatCapacity"
+                          defaultValue="3"
+                        >
                           {[1, 2, 3, 4, 5, 6].map((seats) => (
-                            <option key={seats} value={seats}>{seats}</option>
+                            <option key={seats} value={seats}>
+                              {seats}
+                            </option>
                           ))}
                         </select>
                       </div>
                     </div>
-                    <label className="field-label" htmlFor="plateNumber">Plate number</label>
+                    <label className="field-label" htmlFor="plateNumber">
+                      Plate number
+                    </label>
                     <input id="plateNumber" name="plateNumber" required />
                   </fieldset>
                 )}
@@ -316,7 +417,9 @@ export default function AuthPortal() {
 
             {!isSignup && (
               <>
-                <label className="field-label" htmlFor="phone">Phone number</label>
+                <label className="field-label" htmlFor="phone">
+                  Phone number
+                </label>
                 <input
                   id="phone"
                   name="phone"
@@ -333,7 +436,9 @@ export default function AuthPortal() {
               </>
             )}
 
-            <label className="field-label" htmlFor="password">Password</label>
+            <label className="field-label" htmlFor="password">
+              Password
+            </label>
             <input
               id="password"
               name="password"
@@ -345,10 +450,22 @@ export default function AuthPortal() {
               required
             />
 
-            {error && <p className="form-error" role="alert">{error}</p>}
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
 
-            <button className="submit-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Connecting..." : isSignup ? "Create account" : "Sign in"}
+            <button
+              className="submit-button"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Connecting..."
+                : isSignup
+                  ? "Create account"
+                  : "Sign in"}
               <span aria-hidden="true">-&gt;</span>
             </button>
           </form>
@@ -356,14 +473,23 @@ export default function AuthPortal() {
           {!isSignup && (
             <div className="demo-access">
               <div className="demo-title">
-                <span>DEMO ACCESS</span><span>LOCAL SEED DATA</span>
+                <span>DEMO ACCESS</span>
+                <span>LOCAL SEED DATA</span>
               </div>
               <div className="demo-buttons">
-                <button type="button" onClick={() => fillDemoAccount("01700000002")}>
-                  <span>Nusrat</span><small>Passenger</small>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("01700000002")}
+                >
+                  <span>Nusrat</span>
+                  <small>Passenger</small>
                 </button>
-                <button type="button" onClick={() => fillDemoAccount("01700000001")}>
-                  <span>Jashim</span><small>Driver</small>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("01700000001")}
+                >
+                  <span>Jashim</span>
+                  <small>Driver</small>
                 </button>
               </div>
             </div>
@@ -374,7 +500,8 @@ export default function AuthPortal() {
           </p>
         </div>
         <footer className="access-footer">
-          <span>Dhaka / Bangladesh</span><span>Passengers first, always.</span>
+          <span>Dhaka / Bangladesh</span>
+          <span>Passengers first, always.</span>
         </footer>
       </section>
     </main>
