@@ -271,3 +271,139 @@ export function getRidePayment(token: string, rideRequestId: string) {
     token,
   );
 }
+
+// ── Driver types ────────────────────────────────────────────────────────────
+
+export interface Vehicle {
+  id: string;
+  name: string;
+  model: string;
+  plateNumber: string;
+  seatCapacity: number;
+  isActive: boolean;
+}
+
+export type PoolStatus =
+  | "OPEN"
+  | "DRIVER_ARRIVED"
+  | "STARTED"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface PoolMember {
+  id: string;
+  user: { id: string; name: string; phone: string };
+  seatsTaken: number;
+  rideRequest: {
+    id: string;
+    status: RideStatus;
+    seatsRequested: number;
+    originZone: Zone;
+    destinationZone: Zone;
+  };
+}
+
+export interface ActivePool {
+  id: string;
+  status: PoolStatus;
+  maxSeats: number;
+  availableSeats: number;
+  occupiedSeats: number;
+  originZone: Zone;
+  destinationZone: Zone;
+  vehicle: Vehicle;
+  memberships: PoolMember[];
+  startedAt: string | null;
+  createdAt: string;
+}
+
+export interface PoolHistoryEntry extends ActivePool {
+  completedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface PoolTimelineEntry {
+  id: string;
+  rideRequestId: string | null;
+  status: RideStatus | PoolStatus;
+  note: string | null;
+  changedById: string;
+  createdAt: string;
+  rideRequest: {
+    passenger: { id: string; name: string };
+  } | null;
+}
+
+export interface OpenRideRequest {
+  id: string;
+  status: "REQUESTED";
+  seatsRequested: number;
+  paymentMethod: PaymentMethod;
+  requestedAt: string;
+  originZone: Zone;
+  destinationZone: Zone;
+}
+
+export interface AcceptRideResult {
+  rideRequest: {
+    id: string;
+    status: RideStatus;
+    originZone: Zone;
+    destinationZone: Zone;
+  };
+  pool: ActivePool;
+}
+
+// ── Driver API functions ─────────────────────────────────────────────────────
+
+export function setDriverStatus(token: string, isOnline: boolean) {
+  return request<{ isOnline: boolean }>(
+    "/api/drivers/me/status",
+    { method: "PATCH", body: JSON.stringify({ isOnline }) },
+    token,
+  );
+}
+
+export function getMyVehicles(token: string) {
+  return request<Vehicle[]>("/api/vehicles/me", {}, token);
+}
+
+export function getOpenRideRequests(token: string) {
+  return request<OpenRideRequest[]>("/api/rides/open", {}, token);
+}
+
+export function acceptRideRequest(
+  token: string,
+  rideRequestId: string,
+  vehicleId: string,
+) {
+  return request<AcceptRideResult>(
+    `/api/rides/${encodeURIComponent(rideRequestId)}/accept`,
+    { method: "POST", body: JSON.stringify({ vehicleId }) },
+    token,
+  );
+}
+
+export function getActivePool(token: string) {
+  return request<ActivePool>("/api/pools/me/active", {}, token);
+}
+
+export function getPoolById(token: string, poolId: string) {
+  return request<ActivePool>(
+    `/api/pools/${encodeURIComponent(poolId)}`,
+    {},
+    token,
+  );
+}
+
+export function getPoolTimeline(token: string, poolId: string) {
+  return request<PoolTimelineEntry[]>(
+    `/api/pools/${encodeURIComponent(poolId)}/history`,
+    {},
+    token,
+  );
+}
+
+export function getPoolHistory(token: string) {
+  return request<PoolHistoryEntry[]>("/api/pools/me/history", {}, token);
+}
