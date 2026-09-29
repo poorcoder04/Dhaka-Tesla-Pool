@@ -47,6 +47,42 @@ export interface RideRequestResult {
   destinationZone: Zone;
 }
 
+export type RideStatus =
+  | "REQUESTED"
+  | "MATCHED"
+  | "DRIVER_ARRIVED"
+  | "STARTED"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface PassengerRide {
+  id: string;
+  status: RideStatus;
+  seatsRequested: number;
+  paymentMethod: PaymentMethod;
+  requestedAt: string;
+  matchedAt: string | null;
+  cancelledAt: string | null;
+  originZone: Zone;
+  destinationZone: Zone;
+}
+
+export interface PassengerRideDetails extends PassengerRide {
+  pool: {
+    id: string;
+    status: RideStatus;
+    driver: { name: string };
+    vehicle: { name: string; plateNumber: string | null };
+  } | null;
+}
+
+export interface RideHistoryEntry {
+  id: string;
+  status: RideStatus;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface SignupInput {
   name: string;
   phone: string;
@@ -188,6 +224,34 @@ export function createRideRequest(
       method: "POST",
       body: JSON.stringify(input),
     },
+    token,
+  );
+}
+
+export function getMyRideRequests(token: string) {
+  return request<PassengerRide[]>("/api/rides/me", {}, token);
+}
+
+export function getRideRequest(token: string, rideRequestId: string) {
+  return request<PassengerRideDetails>(
+    `/api/rides/${encodeURIComponent(rideRequestId)}`,
+    {},
+    token,
+  );
+}
+
+export function getRideRequestHistory(token: string, rideRequestId: string) {
+  return request<RideHistoryEntry[]>(
+    `/api/rides/${encodeURIComponent(rideRequestId)}/history`,
+    {},
+    token,
+  );
+}
+
+export function cancelRideRequest(token: string, rideRequestId: string) {
+  return request<PassengerRide>(
+    `/api/rides/${encodeURIComponent(rideRequestId)}/cancel`,
+    { method: "PATCH" },
     token,
   );
 }
