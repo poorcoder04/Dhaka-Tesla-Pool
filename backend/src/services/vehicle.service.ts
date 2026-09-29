@@ -47,5 +47,18 @@ export async function updateVehicle(id: string, ownerId: string, input: UpdateVe
     throw new AppError("You do not own this vehicle", 403);
   }
 
-  return prisma.vehicle.update({ where: { id }, data: input });
+  return prisma.vehicle.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}),
+      ...(input.plateNumber !== undefined
+        ? { plateNumber: input.plateNumber }
+        : {}),
+      ...(input.seatCapacity !== undefined
+        ? { seatCapacity: input.seatCapacity }
+        : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+    },
+  });
 }

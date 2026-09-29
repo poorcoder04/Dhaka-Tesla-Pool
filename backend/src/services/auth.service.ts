@@ -21,7 +21,7 @@ export async function signup(input: SignupInput) {
       data: {
         name: input.name,
         phone: input.phone,
-        email: input.email,
+        ...(input.email !== undefined ? { email: input.email } : {}),
         role: input.role,
         password: hashed,
       },
