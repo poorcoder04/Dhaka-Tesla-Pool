@@ -2330,3 +2330,372 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SLICE 6 — lifecycle actions, payment chips, collect cash, wallet panel
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Lifecycle actions ───────────────────────────────────────────────────── */
+
+.lifecycle-actions {
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.lifecycle-actions > .eyebrow {
+  margin: 0 0 14px;
+  color: #547161;
+}
+
+.lifecycle-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lifecycle-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 650;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.lifecycle-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.lifecycle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Arrive — teal/aqua accent */
+.lifecycle-btn-arrive {
+  background: var(--aqua);
+  color: var(--ink);
+  border-color: #4fc4b4;
+}
+
+.lifecycle-btn-arrive:hover:not(:disabled) {
+  background: #54cbbe;
+}
+
+/* Start — lime accent */
+.lifecycle-btn-start {
+  background: var(--lime);
+  color: var(--ink);
+  border-color: #b8d455;
+}
+
+.lifecycle-btn-start:hover:not(:disabled) {
+  background: #c8e65b;
+}
+
+/* Complete — dark / primary */
+.lifecycle-btn-complete {
+  background: var(--ink);
+  color: #fff;
+}
+
+.lifecycle-btn-complete:hover:not(:disabled) {
+  background: #26362f;
+}
+
+/* Cancel trigger — ghost */
+.lifecycle-btn-cancel-trigger {
+  background: transparent;
+  color: #9a4435;
+  border-color: #e8c4bc;
+}
+
+.lifecycle-btn-cancel-trigger:hover:not(:disabled) {
+  background: #fff3ef;
+}
+
+/* Cancel confirmation box */
+.lifecycle-cancel-confirm {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #efc8bf;
+  border-radius: 6px;
+  background: #fff8f5;
+}
+
+.lifecycle-cancel-confirm > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.lifecycle-cancel-confirm strong {
+  color: #59372f;
+  font-size: 13px;
+}
+
+.lifecycle-cancel-confirm p {
+  margin: 0;
+  color: #84645d;
+  font-size: 11px;
+}
+
+.lifecycle-cancel-reason {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d8dfd7;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.lifecycle-cancel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Cancel confirm — destructive */
+.lifecycle-btn-cancel-confirm {
+  background: #9a4435;
+  color: #fff;
+  border-color: #a34d3e;
+}
+
+.lifecycle-btn-cancel-confirm:hover:not(:disabled) {
+  background: #7e3829;
+}
+
+/* Keep trip — ghost safe */
+.lifecycle-btn-keep {
+  background: transparent;
+  color: #74483f;
+  border-color: #d9b3aa;
+}
+
+.lifecycle-btn-keep:hover:not(:disabled) {
+  background: #fdf5f3;
+}
+
+/* ── Payment status chip ─────────────────────────────────────────────────── */
+
+.payment-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.payment-chip-paid    { background: #e5f5eb; color: #2a6640; }
+.payment-chip-pending { background: #fff4e0; color: #8a6010; }
+.payment-chip-failed  { background: #fde8e4; color: #933020; }
+
+/* ── Passenger payment row (inside passenger card) ───────────────────────── */
+
+.passenger-payment-loading {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+  padding-top: 6px;
+}
+
+.passenger-payment-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid #e8ece7;
+}
+
+.passenger-fare {
+  display: grid;
+  gap: 5px;
+}
+
+.passenger-fare strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.passenger-payment-method,
+.passenger-payment-status {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* ── Collect cash button ─────────────────────────────────────────────────── */
+
+.collect-cash-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: auto;
+  transition: background-color 130ms ease, transform 130ms ease;
+}
+
+.collect-cash-button:hover:not(:disabled) {
+  background: #c8e65b;
+  transform: translateY(-1px);
+}
+
+.collect-cash-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.collect-error {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* ── Wallet panel (passenger) ────────────────────────────────────────────── */
+
+.wallet-panel {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.wallet-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wallet-balance-info {
+  display: grid;
+  gap: 5px;
+}
+
+.wallet-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.wallet-topup-trigger {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background-color 130ms ease;
+}
+
+.wallet-topup-trigger:hover {
+  background: #f4f7f2;
+  border-color: #aab8ab;
+}
+
+.wallet-topup-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e8ece7;
+}
+
+.wallet-topup-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wallet-topup-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d8dfd7;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.wallet-topup-submit {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background-color 130ms ease;
+}
+
+.wallet-topup-submit:hover:not(:disabled) {
+  background: #26362f;
+}
+
+.wallet-topup-submit:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.wallet-topup-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* ── Responsive tweaks for slice 6 additions ─────────────────────────────── */
+
+@media (max-width: 720px) {
+  .lifecycle-buttons {
+    flex-direction: column;
+  }
+
+  .lifecycle-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .passenger-payment-row {
+    gap: 12px;
+  }
+
+  .collect-cash-button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .wallet-topup-row {
+    flex-direction: column;
+  }
+
+  .wallet-topup-submit {
+    width: 100%;
+  }
+}
