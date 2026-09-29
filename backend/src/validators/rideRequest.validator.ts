@@ -7,7 +7,10 @@ import { z } from "zod";
 export const createRideRequestSchema = z
   .object({
     originZoneId: z.string().trim().min(1, "originZoneId is required"),
-    destinationZoneId: z.string().trim().min(1, "destinationZoneId is required"),
+    destinationZoneId: z
+      .string()
+      .trim()
+      .min(1, "destinationZoneId is required"),
     seatsRequested: z.coerce
       .number()
       .int()

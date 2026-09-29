@@ -1,11 +1,11 @@
+import { PoolStatus, RideStatus } from "../../generated/prisma/client.js";
+import { canTransitionRide } from "../config/statusTransitions.js";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import { estimateFare } from "../utils/estimateFare.js";
-import * as zoneService from "./zone.service.js";
-import { PoolStatus, RideStatus } from "../../generated/prisma/client.js";
-import { canTransitionRide } from "../config/statusTransitions.js";
-import { OPEN_RIDE_STATUSES } from "./poolShared.js";
 import type { CreateRideRequestInput } from "../validators/rideRequest.validator.js";
+import { OPEN_RIDE_STATUSES } from "./poolShared.js";
+import * as zoneService from "./zone.service.js";
 
 // Requests still "in play" — a passenger may only have one of these open at
 // a time (avoids duplicate/orphaned requests at MVP scale). Includes
@@ -18,7 +18,10 @@ const rideRequestInclude = {
   destinationZone: true,
 } as const;
 
-export async function createRideRequest(passengerId: string, input: CreateRideRequestInput) {
+export async function createRideRequest(
+  passengerId: string,
+  input: CreateRideRequestInput,
+) {
   // Both zones must exist (and be active) — reuses the same lookup the
   // zones module already exposes rather than duplicating a findUnique here.
   const [originZone, destinationZone] = await Promise.all([
@@ -33,7 +36,7 @@ export async function createRideRequest(passengerId: string, input: CreateRideRe
   if (existingActive) {
     throw new AppError(
       "You already have an active ride request. Cancel it before requesting another.",
-      409
+      409,
     );
   }
 
@@ -169,7 +172,10 @@ async function cancelUnmatched(id: string, passengerId: string) {
     });
 
     if (result.count === 0) {
-      throw new AppError("This ride request just changed — refresh and try again", 409);
+      throw new AppError(
+        "This ride request just changed — refresh and try again",
+        409,
+      );
     }
 
     await tx.rideStatusHistory.create({
@@ -181,7 +187,10 @@ async function cancelUnmatched(id: string, passengerId: string) {
       },
     });
 
-    return tx.rideRequest.findUniqueOrThrow({ where: { id }, include: rideRequestInclude });
+    return tx.rideRequest.findUniqueOrThrow({
+      where: { id },
+      include: rideRequestInclude,
+    });
   });
 }
 
@@ -198,7 +207,7 @@ async function cancelUnmatched(id: string, passengerId: string) {
 // never be raced past.
 async function cancelFromPool(
   rideRequest: { id: string; poolId: string | null; seatsRequested: number },
-  passengerId: string
+  passengerId: string,
 ) {
   const poolId = rideRequest.poolId;
 
@@ -216,7 +225,10 @@ async function cancelFromPool(
     });
 
     if (seatRelease.count === 0) {
-      throw new AppError("Cannot cancel — the driver's trip is already underway", 409);
+      throw new AppError(
+        "Cannot cancel — the driver's trip is already underway",
+        409,
+      );
     }
 
     const cancelled = await tx.rideRequest.updateMany({
@@ -228,7 +240,10 @@ async function cancelFromPool(
     });
 
     if (cancelled.count === 0) {
-      throw new AppError("This ride request just changed — refresh and try again", 409);
+      throw new AppError(
+        "This ride request just changed — refresh and try again",
+        409,
+      );
     }
 
     await tx.rideStatusHistory.create({
@@ -244,7 +259,13 @@ async function cancelFromPool(
     const remainingActiveMembers = await tx.rideRequest.count({
       where: {
         poolId,
-        status: { in: [RideStatus.MATCHED, RideStatus.DRIVER_ARRIVED, RideStatus.STARTED] },
+        status: {
+          in: [
+            RideStatus.MATCHED,
+            RideStatus.DRIVER_ARRIVED,
+            RideStatus.STARTED,
+          ],
+        },
       },
     });
 
