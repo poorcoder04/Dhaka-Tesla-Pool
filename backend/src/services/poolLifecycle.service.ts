@@ -1,10 +1,16 @@
-import { PoolStatus, RideStatus } from "../../generated/prisma/client.js";
+import {
+  PaymentMethod,
+  PaymentStatus,
+  PoolStatus,
+  RideStatus,
+} from "../../generated/prisma/client.js";
 import {
   assertPoolTransition,
   assertRideTransition,
 } from "../config/statusTransitions.js";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
+import { calculateFare } from "../utils/estimateFare.js";
 import { findOwnedPool } from "./pool.service.js";
 import {
   LIVE_MEMBER_STATUSES,
@@ -49,7 +55,15 @@ async function transitionPool(
 
     const members = await tx.rideRequest.findMany({
       where: { poolId, status: { in: LIVE_MEMBER_STATUSES } },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        passengerId: true,
+        seatsRequested: true,
+        paymentMethod: true,
+        originZone: { select: { name: true } },
+        destinationZone: { select: { name: true } },
+      },
     });
 
     if (members.length === 0) {
@@ -85,6 +99,72 @@ async function transitionPool(
         })),
       ],
     });
+
+    if (spec.to === PoolStatus.COMPLETED) {
+      const totalPoolSeatsOccupied = members.reduce(
+        (total, member) => total + member.seatsRequested,
+        0,
+      );
+
+      for (const member of members) {
+        const fare = calculateFare(
+          member.originZone.name,
+          member.destinationZone.name,
+          member.seatsRequested,
+          totalPoolSeatsOccupied,
+        );
+
+        let status: PaymentStatus = PaymentStatus.PENDING;
+        let transactionId: string | null = null;
+        let paidAt: Date | null = null;
+
+        if (member.paymentMethod === PaymentMethod.WALLET) {
+          const debit = await tx.user.updateMany({
+            where: {
+              id: member.passengerId,
+              walletBalance: { gte: fare.finalFare },
+            },
+            data: { walletBalance: { decrement: fare.finalFare } },
+          });
+
+          if (debit.count === 1) {
+            status = PaymentStatus.PAID;
+            transactionId = `WLT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            paidAt = new Date();
+          } else {
+            status = PaymentStatus.FAILED;
+          }
+        }
+
+        const fareBreakdown = JSON.parse(JSON.stringify(fare));
+        await tx.payment.upsert({
+          where: { rideRequestId: member.id },
+          create: {
+            rideRequestId: member.id,
+            userId: member.passengerId,
+            amount: fare.finalFare,
+            baseFare: fare.baseFare,
+            distanceCharge: fare.distanceCharge,
+            poolDiscount: fare.poolDiscountAmount,
+            fareBreakdown,
+            method: member.paymentMethod,
+            status,
+            transactionId,
+            paidAt,
+          },
+          update: {
+            amount: fare.finalFare,
+            baseFare: fare.baseFare,
+            distanceCharge: fare.distanceCharge,
+            poolDiscount: fare.poolDiscountAmount,
+            fareBreakdown,
+            status,
+            transactionId,
+            paidAt,
+          },
+        });
+      }
+    }
   });
 
   const fresh = await prisma.pool.findUniqueOrThrow({

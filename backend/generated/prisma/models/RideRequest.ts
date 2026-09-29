@@ -40,6 +40,7 @@ export type RideRequestMinAggregateOutputType = {
   originZoneId: string | null
   destinationZoneId: string | null
   seatsRequested: number | null
+  paymentMethod: $Enums.PaymentMethod | null
   status: $Enums.RideStatus | null
   poolId: string | null
   requestedAt: Date | null
@@ -55,6 +56,7 @@ export type RideRequestMaxAggregateOutputType = {
   originZoneId: string | null
   destinationZoneId: string | null
   seatsRequested: number | null
+  paymentMethod: $Enums.PaymentMethod | null
   status: $Enums.RideStatus | null
   poolId: string | null
   requestedAt: Date | null
@@ -70,6 +72,7 @@ export type RideRequestCountAggregateOutputType = {
   originZoneId: number
   destinationZoneId: number
   seatsRequested: number
+  paymentMethod: number
   status: number
   poolId: number
   requestedAt: number
@@ -95,6 +98,7 @@ export type RideRequestMinAggregateInputType = {
   originZoneId?: true
   destinationZoneId?: true
   seatsRequested?: true
+  paymentMethod?: true
   status?: true
   poolId?: true
   requestedAt?: true
@@ -110,6 +114,7 @@ export type RideRequestMaxAggregateInputType = {
   originZoneId?: true
   destinationZoneId?: true
   seatsRequested?: true
+  paymentMethod?: true
   status?: true
   poolId?: true
   requestedAt?: true
@@ -125,6 +130,7 @@ export type RideRequestCountAggregateInputType = {
   originZoneId?: true
   destinationZoneId?: true
   seatsRequested?: true
+  paymentMethod?: true
   status?: true
   poolId?: true
   requestedAt?: true
@@ -227,6 +233,7 @@ export type RideRequestGroupByOutputType = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested: number
+  paymentMethod: $Enums.PaymentMethod
   status: $Enums.RideStatus
   poolId: string | null
   requestedAt: Date
@@ -265,6 +272,7 @@ export type RideRequestWhereInput = {
   originZoneId?: Prisma.StringFilter<"RideRequest"> | string
   destinationZoneId?: Prisma.StringFilter<"RideRequest"> | string
   seatsRequested?: Prisma.IntFilter<"RideRequest"> | number
+  paymentMethod?: Prisma.EnumPaymentMethodFilter<"RideRequest"> | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFilter<"RideRequest"> | $Enums.RideStatus
   poolId?: Prisma.StringNullableFilter<"RideRequest"> | string | null
   requestedAt?: Prisma.DateTimeFilter<"RideRequest"> | Date | string
@@ -287,6 +295,7 @@ export type RideRequestOrderByWithRelationInput = {
   originZoneId?: Prisma.SortOrder
   destinationZoneId?: Prisma.SortOrder
   seatsRequested?: Prisma.SortOrder
+  paymentMethod?: Prisma.SortOrder
   status?: Prisma.SortOrder
   poolId?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedAt?: Prisma.SortOrder
@@ -312,6 +321,7 @@ export type RideRequestWhereUniqueInput = Prisma.AtLeast<{
   originZoneId?: Prisma.StringFilter<"RideRequest"> | string
   destinationZoneId?: Prisma.StringFilter<"RideRequest"> | string
   seatsRequested?: Prisma.IntFilter<"RideRequest"> | number
+  paymentMethod?: Prisma.EnumPaymentMethodFilter<"RideRequest"> | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFilter<"RideRequest"> | $Enums.RideStatus
   poolId?: Prisma.StringNullableFilter<"RideRequest"> | string | null
   requestedAt?: Prisma.DateTimeFilter<"RideRequest"> | Date | string
@@ -334,6 +344,7 @@ export type RideRequestOrderByWithAggregationInput = {
   originZoneId?: Prisma.SortOrder
   destinationZoneId?: Prisma.SortOrder
   seatsRequested?: Prisma.SortOrder
+  paymentMethod?: Prisma.SortOrder
   status?: Prisma.SortOrder
   poolId?: Prisma.SortOrderInput | Prisma.SortOrder
   requestedAt?: Prisma.SortOrder
@@ -357,6 +368,7 @@ export type RideRequestScalarWhereWithAggregatesInput = {
   originZoneId?: Prisma.StringWithAggregatesFilter<"RideRequest"> | string
   destinationZoneId?: Prisma.StringWithAggregatesFilter<"RideRequest"> | string
   seatsRequested?: Prisma.IntWithAggregatesFilter<"RideRequest"> | number
+  paymentMethod?: Prisma.EnumPaymentMethodWithAggregatesFilter<"RideRequest"> | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusWithAggregatesFilter<"RideRequest"> | $Enums.RideStatus
   poolId?: Prisma.StringNullableWithAggregatesFilter<"RideRequest"> | string | null
   requestedAt?: Prisma.DateTimeWithAggregatesFilter<"RideRequest"> | Date | string
@@ -369,6 +381,7 @@ export type RideRequestScalarWhereWithAggregatesInput = {
 export type RideRequestCreateInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -390,6 +403,7 @@ export type RideRequestUncheckedCreateInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -405,6 +419,7 @@ export type RideRequestUncheckedCreateInput = {
 export type RideRequestUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -426,6 +441,7 @@ export type RideRequestUncheckedUpdateInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -444,6 +460,7 @@ export type RideRequestCreateManyInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -456,6 +473,7 @@ export type RideRequestCreateManyInput = {
 export type RideRequestUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -470,6 +488,7 @@ export type RideRequestUncheckedUpdateManyInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -495,6 +514,7 @@ export type RideRequestCountOrderByAggregateInput = {
   originZoneId?: Prisma.SortOrder
   destinationZoneId?: Prisma.SortOrder
   seatsRequested?: Prisma.SortOrder
+  paymentMethod?: Prisma.SortOrder
   status?: Prisma.SortOrder
   poolId?: Prisma.SortOrder
   requestedAt?: Prisma.SortOrder
@@ -514,6 +534,7 @@ export type RideRequestMaxOrderByAggregateInput = {
   originZoneId?: Prisma.SortOrder
   destinationZoneId?: Prisma.SortOrder
   seatsRequested?: Prisma.SortOrder
+  paymentMethod?: Prisma.SortOrder
   status?: Prisma.SortOrder
   poolId?: Prisma.SortOrder
   requestedAt?: Prisma.SortOrder
@@ -529,6 +550,7 @@ export type RideRequestMinOrderByAggregateInput = {
   originZoneId?: Prisma.SortOrder
   destinationZoneId?: Prisma.SortOrder
   seatsRequested?: Prisma.SortOrder
+  paymentMethod?: Prisma.SortOrder
   status?: Prisma.SortOrder
   poolId?: Prisma.SortOrder
   requestedAt?: Prisma.SortOrder
@@ -720,6 +742,10 @@ export type RideRequestUncheckedUpdateManyWithoutPoolNestedInput = {
   deleteMany?: Prisma.RideRequestScalarWhereInput | Prisma.RideRequestScalarWhereInput[]
 }
 
+export type EnumPaymentMethodFieldUpdateOperationsInput = {
+  set?: $Enums.PaymentMethod
+}
+
 export type EnumRideStatusFieldUpdateOperationsInput = {
   set?: $Enums.RideStatus
 }
@@ -771,6 +797,7 @@ export type RideRequestUpdateOneRequiredWithoutPaymentNestedInput = {
 export type RideRequestCreateWithoutPassengerInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -790,6 +817,7 @@ export type RideRequestUncheckedCreateWithoutPassengerInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -837,6 +865,7 @@ export type RideRequestScalarWhereInput = {
   originZoneId?: Prisma.StringFilter<"RideRequest"> | string
   destinationZoneId?: Prisma.StringFilter<"RideRequest"> | string
   seatsRequested?: Prisma.IntFilter<"RideRequest"> | number
+  paymentMethod?: Prisma.EnumPaymentMethodFilter<"RideRequest"> | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFilter<"RideRequest"> | $Enums.RideStatus
   poolId?: Prisma.StringNullableFilter<"RideRequest"> | string | null
   requestedAt?: Prisma.DateTimeFilter<"RideRequest"> | Date | string
@@ -849,6 +878,7 @@ export type RideRequestScalarWhereInput = {
 export type RideRequestCreateWithoutOriginZoneInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -868,6 +898,7 @@ export type RideRequestUncheckedCreateWithoutOriginZoneInput = {
   passengerId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -893,6 +924,7 @@ export type RideRequestCreateManyOriginZoneInputEnvelope = {
 export type RideRequestCreateWithoutDestinationZoneInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -912,6 +944,7 @@ export type RideRequestUncheckedCreateWithoutDestinationZoneInput = {
   passengerId: string
   originZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -969,6 +1002,7 @@ export type RideRequestUpdateManyWithWhereWithoutDestinationZoneInput = {
 export type RideRequestCreateWithoutPoolInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -989,6 +1023,7 @@ export type RideRequestUncheckedCreateWithoutPoolInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -1029,6 +1064,7 @@ export type RideRequestUpdateManyWithWhereWithoutPoolInput = {
 export type RideRequestCreateWithoutMembershipInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -1049,6 +1085,7 @@ export type RideRequestUncheckedCreateWithoutMembershipInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1079,6 +1116,7 @@ export type RideRequestUpdateToOneWithWhereWithoutMembershipInput = {
 export type RideRequestUpdateWithoutMembershipInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1099,6 +1137,7 @@ export type RideRequestUncheckedUpdateWithoutMembershipInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1113,6 +1152,7 @@ export type RideRequestUncheckedUpdateWithoutMembershipInput = {
 export type RideRequestCreateWithoutStatusHistoryInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -1133,6 +1173,7 @@ export type RideRequestUncheckedCreateWithoutStatusHistoryInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1163,6 +1204,7 @@ export type RideRequestUpdateToOneWithWhereWithoutStatusHistoryInput = {
 export type RideRequestUpdateWithoutStatusHistoryInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1183,6 +1225,7 @@ export type RideRequestUncheckedUpdateWithoutStatusHistoryInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1197,6 +1240,7 @@ export type RideRequestUncheckedUpdateWithoutStatusHistoryInput = {
 export type RideRequestCreateWithoutPaymentInput = {
   id?: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -1217,6 +1261,7 @@ export type RideRequestUncheckedCreateWithoutPaymentInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1247,6 +1292,7 @@ export type RideRequestUpdateToOneWithWhereWithoutPaymentInput = {
 export type RideRequestUpdateWithoutPaymentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1267,6 +1313,7 @@ export type RideRequestUncheckedUpdateWithoutPaymentInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1283,6 +1330,7 @@ export type RideRequestCreateManyPassengerInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1295,6 +1343,7 @@ export type RideRequestCreateManyPassengerInput = {
 export type RideRequestUpdateWithoutPassengerInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1314,6 +1363,7 @@ export type RideRequestUncheckedUpdateWithoutPassengerInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1331,6 +1381,7 @@ export type RideRequestUncheckedUpdateManyWithoutPassengerInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1345,6 +1396,7 @@ export type RideRequestCreateManyOriginZoneInput = {
   passengerId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1359,6 +1411,7 @@ export type RideRequestCreateManyDestinationZoneInput = {
   passengerId: string
   originZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   poolId?: string | null
   requestedAt?: Date | string
@@ -1371,6 +1424,7 @@ export type RideRequestCreateManyDestinationZoneInput = {
 export type RideRequestUpdateWithoutOriginZoneInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1390,6 +1444,7 @@ export type RideRequestUncheckedUpdateWithoutOriginZoneInput = {
   passengerId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1407,6 +1462,7 @@ export type RideRequestUncheckedUpdateManyWithoutOriginZoneInput = {
   passengerId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1419,6 +1475,7 @@ export type RideRequestUncheckedUpdateManyWithoutOriginZoneInput = {
 export type RideRequestUpdateWithoutDestinationZoneInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1438,6 +1495,7 @@ export type RideRequestUncheckedUpdateWithoutDestinationZoneInput = {
   passengerId?: Prisma.StringFieldUpdateOperationsInput | string
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1455,6 +1513,7 @@ export type RideRequestUncheckedUpdateManyWithoutDestinationZoneInput = {
   passengerId?: Prisma.StringFieldUpdateOperationsInput | string
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   poolId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1470,6 +1529,7 @@ export type RideRequestCreateManyPoolInput = {
   originZoneId: string
   destinationZoneId: string
   seatsRequested?: number
+  paymentMethod?: $Enums.PaymentMethod
   status?: $Enums.RideStatus
   requestedAt?: Date | string
   matchedAt?: Date | string | null
@@ -1481,6 +1541,7 @@ export type RideRequestCreateManyPoolInput = {
 export type RideRequestUpdateWithoutPoolInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1501,6 +1562,7 @@ export type RideRequestUncheckedUpdateWithoutPoolInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1518,6 +1580,7 @@ export type RideRequestUncheckedUpdateManyWithoutPoolInput = {
   originZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   destinationZoneId?: Prisma.StringFieldUpdateOperationsInput | string
   seatsRequested?: Prisma.IntFieldUpdateOperationsInput | number
+  paymentMethod?: Prisma.EnumPaymentMethodFieldUpdateOperationsInput | $Enums.PaymentMethod
   status?: Prisma.EnumRideStatusFieldUpdateOperationsInput | $Enums.RideStatus
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1563,6 +1626,7 @@ export type RideRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   originZoneId?: boolean
   destinationZoneId?: boolean
   seatsRequested?: boolean
+  paymentMethod?: boolean
   status?: boolean
   poolId?: boolean
   requestedAt?: boolean
@@ -1586,6 +1650,7 @@ export type RideRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   originZoneId?: boolean
   destinationZoneId?: boolean
   seatsRequested?: boolean
+  paymentMethod?: boolean
   status?: boolean
   poolId?: boolean
   requestedAt?: boolean
@@ -1605,6 +1670,7 @@ export type RideRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   originZoneId?: boolean
   destinationZoneId?: boolean
   seatsRequested?: boolean
+  paymentMethod?: boolean
   status?: boolean
   poolId?: boolean
   requestedAt?: boolean
@@ -1624,6 +1690,7 @@ export type RideRequestSelectScalar = {
   originZoneId?: boolean
   destinationZoneId?: boolean
   seatsRequested?: boolean
+  paymentMethod?: boolean
   status?: boolean
   poolId?: boolean
   requestedAt?: boolean
@@ -1633,7 +1700,7 @@ export type RideRequestSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RideRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "passengerId" | "originZoneId" | "destinationZoneId" | "seatsRequested" | "status" | "poolId" | "requestedAt" | "matchedAt" | "cancelledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["rideRequest"]>
+export type RideRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "passengerId" | "originZoneId" | "destinationZoneId" | "seatsRequested" | "paymentMethod" | "status" | "poolId" | "requestedAt" | "matchedAt" | "cancelledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["rideRequest"]>
 export type RideRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   passenger?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   originZone?: boolean | Prisma.ZoneDefaultArgs<ExtArgs>
@@ -1674,6 +1741,7 @@ export type $RideRequestPayload<ExtArgs extends runtime.Types.Extensions.Interna
     originZoneId: string
     destinationZoneId: string
     seatsRequested: number
+    paymentMethod: $Enums.PaymentMethod
     status: $Enums.RideStatus
     poolId: string | null
     requestedAt: Date
@@ -2116,6 +2184,7 @@ export interface RideRequestFieldRefs {
   readonly originZoneId: Prisma.FieldRef<"RideRequest", 'String'>
   readonly destinationZoneId: Prisma.FieldRef<"RideRequest", 'String'>
   readonly seatsRequested: Prisma.FieldRef<"RideRequest", 'Int'>
+  readonly paymentMethod: Prisma.FieldRef<"RideRequest", 'PaymentMethod'>
   readonly status: Prisma.FieldRef<"RideRequest", 'RideStatus'>
   readonly poolId: Prisma.FieldRef<"RideRequest", 'String'>
   readonly requestedAt: Prisma.FieldRef<"RideRequest", 'DateTime'>

@@ -55,6 +55,7 @@ model User {
   phone     String   @unique
   role      UserRole @default(PASSENGER)
   password  String?  // hash in production
+  walletBalance Decimal @default(1000.00) @db.Decimal(10, 2)
   isActive  Boolean  @default(true)
   isOnline  Boolean  @default(false) // drivers only: available to accept rides
   createdAt DateTime @default(now())
@@ -145,6 +146,7 @@ model RideRequest {
   originZoneId      String
   destinationZoneId String
   seatsRequested    Int        @default(1)
+  paymentMethod     PaymentMethod @default(CASH)
   status            RideStatus @default(REQUESTED)
   poolId            String?    // set when matched
   requestedAt       DateTime   @default(now())
@@ -205,16 +207,20 @@ model RideStatusHistory {
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  rideRequestId String        @unique
-  userId        String
-  amount        Decimal       @db.Decimal(10, 2)
-  method        PaymentMethod
-  status        PaymentStatus @default(PENDING)
-  transactionId String?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  rideRequestId  String        @unique
+  userId         String
+  amount         Decimal       @db.Decimal(10, 2)
+  baseFare       Decimal       @default(30.00) @db.Decimal(10, 2)
+  distanceCharge Decimal       @default(0.00) @db.Decimal(10, 2)
+  poolDiscount   Decimal       @default(0.00) @db.Decimal(10, 2)
+  fareBreakdown  Json?
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionId  String?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   // Relations
   rideRequest RideRequest @relation(fields: [rideRequestId], references: [id])

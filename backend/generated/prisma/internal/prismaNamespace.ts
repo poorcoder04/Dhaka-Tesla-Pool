@@ -1062,6 +1062,7 @@ export const UserScalarFieldEnum = {
   phone: 'phone',
   role: 'role',
   password: 'password',
+  walletBalance: 'walletBalance',
   isActive: 'isActive',
   isOnline: 'isOnline',
   createdAt: 'createdAt',
@@ -1124,6 +1125,7 @@ export const RideRequestScalarFieldEnum = {
   originZoneId: 'originZoneId',
   destinationZoneId: 'destinationZoneId',
   seatsRequested: 'seatsRequested',
+  paymentMethod: 'paymentMethod',
   status: 'status',
   poolId: 'poolId',
   requestedAt: 'requestedAt',
@@ -1166,6 +1168,10 @@ export const PaymentScalarFieldEnum = {
   rideRequestId: 'rideRequestId',
   userId: 'userId',
   amount: 'amount',
+  baseFare: 'baseFare',
+  distanceCharge: 'distanceCharge',
+  poolDiscount: 'poolDiscount',
+  fareBreakdown: 'fareBreakdown',
   method: 'method',
   status: 'status',
   transactionId: 'transactionId',
@@ -1185,6 +1191,14 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -1199,6 +1213,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -1232,6 +1255,20 @@ export type EnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
  * Reference to a field of type 'UserRole[]'
  */
 export type ListEnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Decimal'
+ */
+export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
+    
+
+
+/**
+ * Reference to a field of type 'Decimal[]'
+ */
+export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
     
 
 
@@ -1285,6 +1322,20 @@ export type ListEnumPoolStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
+ * Reference to a field of type 'PaymentMethod'
+ */
+export type EnumPaymentMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethod'>
+    
+
+
+/**
+ * Reference to a field of type 'PaymentMethod[]'
+ */
+export type ListEnumPaymentMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethod[]'>
+    
+
+
+/**
  * Reference to a field of type 'RideStatus'
  */
 export type EnumRideStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RideStatus'>
@@ -1299,30 +1350,16 @@ export type ListEnumRideStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
- * Reference to a field of type 'Decimal'
+ * Reference to a field of type 'Json'
  */
-export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
     
 
 
 /**
- * Reference to a field of type 'Decimal[]'
+ * Reference to a field of type 'QueryMode'
  */
-export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
-    
-
-
-/**
- * Reference to a field of type 'PaymentMethod'
- */
-export type EnumPaymentMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethod'>
-    
-
-
-/**
- * Reference to a field of type 'PaymentMethod[]'
- */
-export type ListEnumPaymentMethodFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethod[]'>
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 

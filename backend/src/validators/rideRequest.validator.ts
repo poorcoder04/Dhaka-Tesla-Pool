@@ -7,13 +7,17 @@ import { z } from "zod";
 export const createRideRequestSchema = z
   .object({
     originZoneId: z.string().trim().min(1, "originZoneId is required"),
-    destinationZoneId: z.string().trim().min(1, "destinationZoneId is required"),
+    destinationZoneId: z
+      .string()
+      .trim()
+      .min(1, "destinationZoneId is required"),
     seatsRequested: z.coerce
       .number()
       .int()
       .min(1, "Must request at least 1 seat")
       .max(3, "A ride request can be for at most 3 seats")
       .default(1),
+    paymentMethod: z.enum(["CASH", "WALLET"]).default("CASH"),
   })
   .refine((data) => data.originZoneId !== data.destinationZoneId, {
     message: "originZoneId and destinationZoneId must be different",

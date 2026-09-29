@@ -1,80 +1,74 @@
-/**
- * PLACEHOLDER fare estimator — used only to show the passenger a number at
- * request time . It is never persisted
- * to Payment. The real, documented fare model 
- * passengerFare = baseFare + distanceCharge - poolDiscount, with a decided
- * money-storage strategy) lands in Step 7 and will REPLACE the body of this
- * function only — nothing that calls estimateFare() needs to change.
- *
- * Distances below are rough straight-line estimates between the seeded
- * Dhaka zones, hand-picked just to make the stub non-constant. Not meant
- * to be accurate. Only the most likely pairs are listed; anything missing
- * falls back to DEFAULT_DISTANCE_KM.
- */
+import {
+  DEFAULT_DISTANCE_KM,
+  FARE_CONFIG,
+  ZONE_DISTANCES_KM,
+} from "../config/fareConfig.js";
 
-const BASE_FARE = 30; // taka
-const RATE_PER_KM = 15; // taka/km
-const DEFAULT_DISTANCE_KM = 8; // fallback if a zone pair isn't in the table below
-
-// Keyed by "ZoneA|ZoneB" with names sorted alphabetically so lookup is
-// direction-independent (Banani->Mirpur costs the same as Mirpur->Banani).
-const ZONE_DISTANCE_KM: Record<string, number> = {
-  // original 6-zone set
-  "Banani|Gulshan 1": 2,
-  "Banani|Mohakhali": 2,
-  "Banani|Dhanmondi": 9,
-  "Banani|Mirpur": 10,
-  "Banani|Uttara": 12,
-  "Gulshan 1|Mohakhali": 3,
-  "Dhanmondi|Gulshan 1": 10,
-  "Gulshan 1|Mirpur": 11,
-  "Gulshan 1|Uttara": 14,
-  "Dhanmondi|Mohakhali": 8,
-  "Mirpur|Mohakhali": 9,
-  "Mohakhali|Uttara": 11,
-  "Dhanmondi|Mirpur": 7,
-  "Dhanmondi|Uttara": 17,
-  "Mirpur|Uttara": 10,
-
-  // uptown cluster additions
-  "Banani|Bashundhara": 4,
-  "Bashundhara|Gulshan 1": 3,
-  "Bashundhara|Mohakhali": 5,
-  "Badda|Bashundhara": 2,
-  "Baridhara|Bashundhara": 2,
-  "Badda|Banani": 5,
-  "Badda|Gulshan 1": 4,
-  "Badda|Mohakhali": 6,
-  "Baridhara|Banani": 3,
-  "Baridhara|Gulshan 1": 2,
-  "Baridhara|Mohakhali": 5,
-
-  // mirpur-road-corridor cluster additions
-  "Dhanmondi|Farmgate": 3,
-  "Farmgate|Mohakhali": 4,
-  "Farmgate|Mirpur": 6,
-  "Farmgate|Tejgaon": 2,
-  "Mohakhali|Tejgaon": 2,
-  "Dhanmondi|Tejgaon": 5,
-
-  // east-central cluster + cross-town spot checks
-  "Badda|Rampura": 3,
-  "Motijheel|Rampura": 6,
-  "Dhanmondi|Motijheel": 6,
-  "Gulshan 1|Motijheel": 9,
-};
-
-function distanceBetween(originZoneName: string, destinationZoneName: string): number {
-  const key = [originZoneName, destinationZoneName].sort().join("|");
-  return ZONE_DISTANCE_KM[key] ?? DEFAULT_DISTANCE_KM;
+export interface FareCalculationResult {
+  baseFare: number;
+  distanceKm: number;
+  distanceCharge: number;
+  subtotal: number;
+  poolDiscountPercentage: number;
+  poolDiscountAmount: number;
+  finalFare: number;
 }
 
-/**
- * Returns a rough fare estimate in taka, rounded to 2 decimal places.
- * Takes zone NAMES (not ids) so it has no dependency on the database layer.
- */
-export function estimateFare(originZoneName: string, destinationZoneName: string): number {
-  const distanceKm = distanceBetween(originZoneName, destinationZoneName);
-  const fare = BASE_FARE + distanceKm * RATE_PER_KM;
-  return Math.round(fare * 100) / 100;
+export function getZoneDistance(
+  originZoneName: string,
+  destZoneName: string,
+): number {
+  if (originZoneName === destZoneName) return 0;
+  return (
+    ZONE_DISTANCES_KM[originZoneName]?.[destZoneName] ??
+    ZONE_DISTANCES_KM[destZoneName]?.[originZoneName] ??
+    DEFAULT_DISTANCE_KM
+  );
+}
+
+export function getDiscountPercentage(totalSeatsOccupied: number): number {
+  const tier = FARE_CONFIG.DISCOUNT_TIERS.find(
+    (t) => totalSeatsOccupied >= t.minSeats && totalSeatsOccupied <= t.maxSeats,
+  );
+  return tier ? tier.discountPercentage : 30;
+}
+
+export function calculateFare(
+  originZoneName: string,
+  destZoneName: string,
+  seatsBooked: number = 1,
+  totalPoolSeatsOccupied: number = 1,
+): FareCalculationResult {
+  const distanceKm = getZoneDistance(originZoneName, destZoneName);
+
+  const baseFarePoysha = FARE_CONFIG.BASE_FARE_TAKA * 100;
+  const distanceRatePoysha = FARE_CONFIG.PER_KM_RATE_TAKA * 100;
+  const distanceChargePoysha = distanceKm * distanceRatePoysha;
+
+  const singleSeatSubtotalPoysha = baseFarePoysha + distanceChargePoysha;
+  const passengerSubtotalPoysha = singleSeatSubtotalPoysha * seatsBooked;
+
+  const discountPct = getDiscountPercentage(totalPoolSeatsOccupied);
+  const discountAmountPoysha = Math.round(
+    (passengerSubtotalPoysha * discountPct) / 100,
+  );
+  const finalFarePoysha = passengerSubtotalPoysha - discountAmountPoysha;
+
+  return {
+    baseFare: (baseFarePoysha * seatsBooked) / 100,
+    distanceKm,
+    distanceCharge: (distanceChargePoysha * seatsBooked) / 100,
+    subtotal: passengerSubtotalPoysha / 100,
+    poolDiscountPercentage: discountPct,
+    poolDiscountAmount: discountAmountPoysha / 100,
+    finalFare: finalFarePoysha / 100,
+  };
+}
+
+export function estimateFare(
+  originZoneName: string,
+  destinationZoneName: string,
+): number {
+  const result = calculateFare(originZoneName, destinationZoneName, 1, 1);
+  return Number(result.finalFare.toFixed(2));
 }
