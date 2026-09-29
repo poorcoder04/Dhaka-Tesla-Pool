@@ -13,6 +13,40 @@ export interface AuthResult {
   token: string;
 }
 
+export interface Zone {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export type PaymentMethod = "CASH" | "WALLET";
+
+export interface FareBreakdown {
+  baseFare: number;
+  distanceKm: number;
+  distanceCharge: number;
+  subtotal: number;
+  poolDiscountPercentage: number;
+  poolDiscountAmount: number;
+  finalFare: number;
+}
+
+export interface FareEstimate {
+  solo: FareBreakdown;
+  twoPassengerPool: FareBreakdown;
+  threePassengerPool: FareBreakdown;
+}
+
+export interface RideRequestResult {
+  id: string;
+  status: "REQUESTED";
+  seatsRequested: number;
+  paymentMethod: PaymentMethod;
+  estimatedFare: number;
+  originZone: Zone;
+  destinationZone: Zone;
+}
+
 export interface SignupInput {
   name: string;
   phone: string;
@@ -28,7 +62,10 @@ export interface SignupInput {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -62,12 +99,11 @@ async function request<T>(
     cache: "no-store",
   });
   const payload = (await response.json().catch(() => null)) as
-    | ApiEnvelope<T>
-    | ApiFailure
-    | null;
+    ApiEnvelope<T> | ApiFailure | null;
 
   if (!response.ok) {
-    const message = payload && "error" in payload ? payload.error?.message : null;
+    const message =
+      payload && "error" in payload ? payload.error?.message : null;
     throw new ApiError(
       message ?? "The server could not complete your request.",
       response.status,
@@ -97,4 +133,61 @@ export function signup(input: SignupInput) {
 
 export function getCurrentUser(token: string) {
   return request<SessionUser>("/api/auth/me", {}, token);
+}
+
+export function getZones() {
+  return request<Zone[]>("/api/zones");
+}
+
+interface FareEstimateResponse {
+  soloFare: FareBreakdown;
+  estimatedPoolFares: {
+    twoPasssengers: FareBreakdown;
+    threePassengers: FareBreakdown;
+  };
+}
+
+export async function estimateRideFare(
+  token: string,
+  originZoneId: string,
+  destinationZoneId: string,
+  seatsRequested: number,
+): Promise<FareEstimate> {
+  const result = await request<FareEstimateResponse>(
+    "/api/fares/estimate",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        originZoneId,
+        destinationZoneId,
+        seatsRequested,
+      }),
+    },
+    token,
+  );
+
+  return {
+    solo: result.soloFare,
+    twoPassengerPool: result.estimatedPoolFares.twoPasssengers,
+    threePassengerPool: result.estimatedPoolFares.threePassengers,
+  };
+}
+
+export function createRideRequest(
+  token: string,
+  input: {
+    originZoneId: string;
+    destinationZoneId: string;
+    seatsRequested: number;
+    paymentMethod: PaymentMethod;
+  },
+) {
+  return request<RideRequestResult>(
+    "/api/rides",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    token,
+  );
 }
