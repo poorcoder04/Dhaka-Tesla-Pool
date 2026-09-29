@@ -319,3 +319,28 @@ npm test
 | `POST`  | `/api/pools/:id/complete` | Driver    | Complete the trip         |
 | `POST`  | `/api/pools/:id/cancel`   | Driver    | Cancel the pool/trip      |
 | `GET`   | `/api/rides/:id/history`  | Passenger | Get ride request history  |
+
+### Step 8 (in progress) — test suite
+
+See **[docs/testing.md](docs/testing.md)** for the full write-up: how to run
+the suites, what each PRD §12 requirement is covered by, and how the
+concurrency test proves the last-seat race is handled.
+
+The suite is split in two, because the requirements are not the same kind of
+claim:
+
+- **`unit`** — fare arithmetic and the state-transition tables. Pure logic, no
+  database, runs anywhere.
+- **`integration`** — seat capacity, the concurrent seat-claim race,
+  cross-user access control and cancellation rules. These are database
+  invariants: the guarantee lives in PostgreSQL's row locking, so mocking
+  Prisma would prove nothing. They run against a throwaway database in
+  `docker-compose.test.yml` on its own port, and `globalSetup` refuses to run
+  if it is pointed at your development database.
+
+```bash
+cd backend
+npm run test:db:up    # start the throwaway database on :5434
+npm test              # unit + integration
+```
+

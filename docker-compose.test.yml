@@ -1,0 +1,32 @@
+# Throwaway PostgreSQL for the integration test suite.
+#
+#   docker compose -f docker-compose.test.yml up -d
+#
+# Deliberately separate from docker-compose.yml:
+#   - a different host port (5434 vs 5433), so it can never collide with the
+#     development database
+#   - a different database name (tesla_pool_test_db)
+#   - tmpfs storage, so the data directory lives in RAM and every `up` starts
+#     from an empty cluster
+#
+# Integration tests TRUNCATE every table between tests. Pointing them at a
+# database you care about will delete its contents, so globalSetup refuses to
+# run if TEST_DATABASE_URL and DATABASE_URL name the same database.
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: dhaka_tesla_postgres_test
+    restart: "no"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test_password_here
+      POSTGRES_DB: tesla_pool_test_db
+    ports:
+      - "5434:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tesla_pool_test_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
