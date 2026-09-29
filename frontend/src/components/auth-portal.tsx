@@ -1,5 +1,6 @@
 "use client";
 
+import DriverPanel from "@/components/driver-panel";
 import RideRequestPanel from "@/components/ride-request-panel";
 import {
   ApiError,
@@ -146,8 +147,6 @@ export default function AuthPortal() {
   }
 
   if (user) {
-    const roleLabel = user.role === "DRIVER" ? "Driver" : "Passenger";
-
     return (
       <main className="workspace-screen">
         <header className="workspace-header">
@@ -171,26 +170,7 @@ export default function AuthPortal() {
         {user.role === "PASSENGER" && sessionToken ? (
           <RideRequestPanel token={sessionToken} passengerName={user.name} />
         ) : (
-          <section
-            className="workspace-content"
-            aria-labelledby="welcome-heading"
-          >
-            <p className="eyebrow">{roleLabel} account</p>
-            <h1 id="welcome-heading">Welcome, {user.name}.</h1>
-            <p className="workspace-copy">
-              You are signed in as a {roleLabel.toLowerCase()}.
-            </p>
-            <div className="profile-strip">
-              <div>
-                <span className="profile-label">Phone</span>
-                <strong>{user.phone}</strong>
-              </div>
-              <div>
-                <span className="profile-label">Account type</span>
-                <strong>{roleLabel}</strong>
-              </div>
-            </div>
-          </section>
+          <DriverPanel token={sessionToken} driverName={user.name} />
         )}
         {user.role === "DRIVER" && (
           <div className="workspace-route" aria-hidden="true">
