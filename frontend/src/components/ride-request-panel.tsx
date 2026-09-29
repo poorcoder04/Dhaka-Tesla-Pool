@@ -1,12 +1,23 @@
 "use client";
 
 import {
+  ApiError,
+  cancelRideRequest,
   createRideRequest,
   estimateRideFare,
+  getRideRequest,
+  getRideRequestHistory,
+  getRidePayment,
+  getMyRideRequests,
   getZones,
   type FareEstimate,
   type PaymentMethod,
+  type PassengerRide,
+  type PassengerRideDetails,
+  type RidePayment,
+  type RideHistoryEntry,
   type RideRequestResult,
+  type RideStatus,
   type Zone,
 } from "@/lib/api";
 import { useEffect, useRef, useState } from "react";
@@ -22,12 +33,32 @@ interface QuoteSelection {
   seatsRequested: number;
 }
 
+const ACTIVE_RIDE_STATUSES: RideStatus[] = [
+  "REQUESTED",
+  "MATCHED",
+  "DRIVER_ARRIVED",
+  "STARTED",
+];
+
+const CANCELLABLE_RIDE_STATUSES: RideStatus[] = [
+  "REQUESTED",
+  "MATCHED",
+  "DRIVER_ARRIVED",
+];
+
 function formatMoney(amount: number): string {
   return new Intl.NumberFormat("en-BD", {
     style: "currency",
     currency: "BDT",
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function loadRideTracking(token: string, rideRequestId: string) {
+  return Promise.all([
+    getRideRequest(token, rideRequestId),
+    getRideRequestHistory(token, rideRequestId),
+  ]);
 }
 
 export default function RideRequestPanel({
@@ -44,12 +75,25 @@ export default function RideRequestPanel({
     null,
   );
   const [ride, setRide] = useState<RideRequestResult | null>(null);
+  const [passengerRides, setPassengerRides] = useState<PassengerRide[]>([]);
+  const [trackingDetails, setTrackingDetails] =
+    useState<PassengerRideDetails | null>(null);
+  const [rideTimeline, setRideTimeline] = useState<RideHistoryEntry[]>([]);
   const [zoneError, setZoneError] = useState("");
+  const [ridesError, setRidesError] = useState("");
+  const [trackingError, setTrackingError] = useState("");
+  const [cancellationError, setCancellationError] = useState("");
   const [estimateError, setEstimateError] = useState("");
   const [requestError, setRequestError] = useState("");
   const [isLoadingZones, setIsLoadingZones] = useState(true);
+  const [isLoadingRides, setIsLoadingRides] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isConfirmingCancellation, setIsConfirmingCancellation] =
+    useState(false);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancelledRide, setCancelledRide] = useState<PassengerRide | null>(null);
   const quoteSequence = useRef(0);
 
   useEffect(() => {
@@ -77,6 +121,31 @@ export default function RideRequestPanel({
     };
   }, []);
 
+  useEffect(() => {
+    let isCurrent = true;
+
+    getMyRideRequests(token)
+      .then((rides) => {
+        if (isCurrent) setPassengerRides(rides);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setRidesError(
+            error instanceof Error
+              ? error.message
+              : "Could not load your ride requests.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingRides(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [token]);
+
   const routeIsValid =
     originZoneId !== "" &&
     destinationZoneId !== "" &&
@@ -86,6 +155,35 @@ export default function RideRequestPanel({
     quotedSelection?.originZoneId === originZoneId &&
     quotedSelection.destinationZoneId === destinationZoneId &&
     quotedSelection.seatsRequested === seatsRequested;
+  const activeRide = passengerRides.find((item) =>
+    ACTIVE_RIDE_STATUSES.includes(item.status),
+  );
+
+  useEffect(() => {
+    if (!activeRide) return;
+
+    let isCurrent = true;
+
+    loadRideTracking(token, activeRide.id)
+      .then(([details, timeline]) => {
+        if (!isCurrent) return;
+        setTrackingDetails(details);
+        setRideTimeline(timeline);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setTrackingError(
+            error instanceof Error
+              ? error.message
+              : "Could not load ride activity.",
+          );
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeRide, token]);
 
   function clearQuote() {
     quoteSequence.current += 1;
@@ -159,6 +257,81 @@ export default function RideRequestPanel({
     }
   }
 
+  async function handleRefreshRide() {
+    if (!activeRide) return;
+
+    setIsRefreshing(true);
+    setTrackingError("");
+
+    try {
+      const [rides, [details, timeline]] = await Promise.all([
+        getMyRideRequests(token),
+        loadRideTracking(token, activeRide.id),
+      ]);
+      setPassengerRides(rides);
+      setTrackingDetails(details);
+      setRideTimeline(timeline);
+    } catch (error) {
+      setTrackingError(
+        error instanceof Error
+          ? error.message
+          : "Could not refresh your ride status.",
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  async function handleViewCreatedRide() {
+    setRide(null);
+    setIsLoadingRides(true);
+    setRidesError("");
+
+    try {
+      setPassengerRides(await getMyRideRequests(token));
+    } catch (error) {
+      setRidesError(
+        error instanceof Error
+          ? error.message
+          : "Could not load your ride request.",
+      );
+    } finally {
+      setIsLoadingRides(false);
+    }
+  }
+
+  async function handleCancelRide() {
+    if (
+      !activeRide ||
+      !CANCELLABLE_RIDE_STATUSES.includes(activeRide.status)
+    ) {
+      return;
+    }
+
+    setIsCancelling(true);
+    setCancellationError("");
+
+    try {
+      const cancelled = await cancelRideRequest(token, activeRide.id);
+      setPassengerRides((rides) =>
+        rides.map((item) =>
+          item.id === cancelled.id ? { ...item, ...cancelled } : item,
+        ),
+      );
+      setIsConfirmingCancellation(false);
+      setCancelledRide(cancelled);
+    } catch (error) {
+      setCancellationError(
+        error instanceof Error
+          ? error.message
+          : "Could not cancel this ride. Refresh its status and try again.",
+      );
+      setIsConfirmingCancellation(false);
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   if (ride) {
     return (
       <section
@@ -204,6 +377,220 @@ export default function RideRequestPanel({
           Your fare is estimated before pooling. A shared ride may cost less
           depending on how many seats are occupied.
         </p>
+        <button
+          className="request-button"
+          type="button"
+          onClick={handleViewCreatedRide}
+        >
+          Track this request
+          <span aria-hidden="true">-&gt;</span>
+        </button>
+      </section>
+    );
+  }
+
+  if (cancelledRide) {
+    return (
+      <section
+        className="ride-content"
+        aria-labelledby="ride-cancelled-heading"
+      >
+        <div className="ride-success-mark" aria-hidden="true">OK</div>
+        <p className="eyebrow">REQUEST CANCELLED</p>
+        <h1 id="ride-cancelled-heading">Your request was cancelled.</h1>
+        <p className="ride-intro">
+          {cancelledRide.originZone.name} to {cancelledRide.destinationZone.name}
+        </p>
+        <button
+          className="estimate-button"
+          type="button"
+          onClick={() => setCancelledRide(null)}
+        >
+          Request another ride
+        </button>
+      </section>
+    );
+  }
+
+  if (isLoadingRides) {
+    return (
+      <section className="ride-content" aria-live="polite">
+        <div className="ride-loading">Checking your active ride...</div>
+      </section>
+    );
+  }
+
+  if (ridesError) {
+    return (
+      <section className="ride-content" aria-labelledby="rides-error-heading">
+        <p className="eyebrow">PASSENGER / YOUR RIDES</p>
+        <h1 id="rides-error-heading">Your ride list is unavailable.</h1>
+        <p className="ride-intro" role="alert">
+          {ridesError}
+        </p>
+        <button
+          className="estimate-button"
+          type="button"
+          onClick={() => window.location.reload()}
+        >
+          Reload
+        </button>
+      </section>
+    );
+  }
+
+  if (activeRide) {
+    const trackingMatchesRide = trackingDetails?.id === activeRide.id;
+
+    return (
+      <section className="ride-content" aria-labelledby="active-ride-heading">
+        <p className="eyebrow">PASSENGER / ACTIVE RIDE</p>
+        <h1 id="active-ride-heading">Your request is underway.</h1>
+        <p className="ride-intro">
+          We found your existing ride request. Complete it before requesting
+          another ride.
+        </p>
+        <div className="active-ride-summary">
+          <div>
+            <span className="ride-detail-label">ROUTE</span>
+            <strong>
+              {activeRide.originZone.name} to {activeRide.destinationZone.name}
+            </strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">STATUS</span>
+            <strong className="status-requested">
+              {activeRide.status.replaceAll("_", " ")}
+            </strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">SEATS</span>
+            <strong>{activeRide.seatsRequested}</strong>
+          </div>
+          <div>
+            <span className="ride-detail-label">PAYMENT</span>
+            <strong>
+              {activeRide.paymentMethod === "CASH" ? "Cash" : "TeslaPay wallet"}
+            </strong>
+          </div>
+        </div>
+        <div className="ride-tracking-section">
+          <div className="tracking-heading">
+            <div>
+              <p className="eyebrow">STATUS HISTORY</p>
+              <h2>Ride activity</h2>
+            </div>
+            <button
+              className="refresh-status-button"
+              type="button"
+              onClick={handleRefreshRide}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh status"}
+            </button>
+          </div>
+
+          {trackingError && (
+            <p className="ride-inline-error" role="alert">{trackingError}</p>
+          )}
+
+          {!trackingMatchesRide && !trackingError && (
+            <div className="ride-loading" aria-live="polite">
+              Loading ride activity...
+            </div>
+          )}
+
+          {trackingMatchesRide && trackingDetails.pool && (
+            <div className="assigned-vehicle">
+              <span className="ride-detail-label">DRIVER / VEHICLE</span>
+              <strong>
+                {trackingDetails.pool.driver.name} / {trackingDetails.pool.vehicle.name}
+              </strong>
+              {trackingDetails.pool.vehicle.plateNumber && (
+                <span>{trackingDetails.pool.vehicle.plateNumber}</span>
+              )}
+            </div>
+          )}
+
+          {trackingMatchesRide && rideTimeline.length === 0 && (
+            <p className="ride-empty">No status history is available yet.</p>
+          )}
+
+          {trackingMatchesRide && rideTimeline.length > 0 && (
+            <ol className="ride-timeline">
+              {rideTimeline.map((entry, index) => (
+                <li className="ride-timeline-entry" key={entry.id}>
+                  <span
+                    className={`timeline-marker${index === rideTimeline.length - 1 ? " timeline-marker-current" : ""}`}
+                    aria-hidden="true"
+                  />
+                  <div className="timeline-entry-content">
+                    <div className="timeline-entry-heading">
+                      <strong>{entry.status.replaceAll("_", " ")}</strong>
+                      <time dateTime={entry.createdAt}>
+                        {new Intl.DateTimeFormat("en-BD", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(entry.createdAt))}
+                      </time>
+                    </div>
+                    {entry.note && <p>{entry.note}</p>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {CANCELLABLE_RIDE_STATUSES.includes(activeRide.status) ? (
+            isConfirmingCancellation ? (
+              <div className="cancellation-confirmation" role="group" aria-label="Confirm ride cancellation">
+                <div>
+                  <strong>Cancel this ride request?</strong>
+                  <p>This cannot be undone.</p>
+                </div>
+                <div className="cancellation-actions">
+                  <button
+                    className="confirm-cancel-button"
+                    type="button"
+                    onClick={handleCancelRide}
+                    disabled={isCancelling}
+                  >
+                    {isCancelling ? "Cancelling..." : "Confirm cancellation"}
+                  </button>
+                  <button
+                    className="keep-ride-button"
+                    type="button"
+                    onClick={() => setIsConfirmingCancellation(false)}
+                    disabled={isCancelling}
+                  >
+                    Keep ride
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="cancel-ride-button"
+                type="button"
+                onClick={() => {
+                  setCancellationError("");
+                  setIsConfirmingCancellation(true);
+                }}
+              >
+                Cancel ride
+              </button>
+            )
+          ) : (
+            <p className="ride-note">
+              This trip has started; cancellation is no longer available.
+            </p>
+          )}
+
+          {cancellationError && (
+            <p className="ride-inline-error" role="alert">
+              {cancellationError}
+            </p>
+          )}
+        </div>
       </section>
     );
   }
@@ -396,6 +783,7 @@ export default function RideRequestPanel({
           )}
         </>
       )}
+      <RideHistoryList token={token} rides={passengerRides} />
     </section>
   );
 }
@@ -418,5 +806,187 @@ function FareOption({
       )}
       {fare.poolDiscountPercentage === 0 && <small>Standard estimate</small>}
     </div>
+  );
+}
+
+function RideHistoryList({
+  token,
+  rides,
+}: {
+  token: string;
+  rides: PassengerRide[];
+}) {
+  const historyRides = rides.filter(
+    (ride) => ride.status === "COMPLETED" || ride.status === "CANCELLED",
+  );
+  const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
+  const [loadingRideId, setLoadingRideId] = useState<string | null>(null);
+  const [loadedHistory, setLoadedHistory] = useState<{
+    rideId: string;
+    entries: RideHistoryEntry[];
+    payment: RidePayment | null;
+  } | null>(null);
+  const [loadError, setLoadError] = useState<{
+    rideId: string;
+    message: string;
+  } | null>(null);
+  const requestSequence = useRef(0);
+
+  async function toggleRideActivity(ride: PassengerRide) {
+    if (expandedRideId === ride.id) {
+      requestSequence.current += 1;
+      setExpandedRideId(null);
+      setLoadingRideId(null);
+      return;
+    }
+
+    const sequence = ++requestSequence.current;
+    setExpandedRideId(ride.id);
+    setLoadingRideId(ride.id);
+    setLoadError(null);
+
+    try {
+      const [entries, payment] = await Promise.all([
+        getRideRequestHistory(token, ride.id),
+        ride.status === "COMPLETED"
+          ? getRidePayment(token, ride.id).catch((error: unknown) => {
+              if (error instanceof ApiError && error.status === 404) return null;
+              throw error;
+            })
+          : Promise.resolve(null),
+      ]);
+
+      if (requestSequence.current === sequence) {
+        setLoadedHistory({ rideId: ride.id, entries, payment });
+      }
+    } catch (error) {
+      if (requestSequence.current === sequence) {
+        setLoadError({
+          rideId: ride.id,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not load this ride's history.",
+        });
+      }
+    } finally {
+      if (requestSequence.current === sequence) setLoadingRideId(null);
+    }
+  }
+
+  return (
+    <section className="passenger-history" aria-labelledby="ride-history-heading">
+      <div className="passenger-history-heading">
+        <div>
+          <p className="eyebrow">PASSENGER / PAST RIDES</p>
+          <h2 id="ride-history-heading">Ride history</h2>
+        </div>
+        <span>{historyRides.length} rides</span>
+      </div>
+
+      {historyRides.length === 0 ? (
+        <p className="history-empty">
+          Completed and cancelled rides will appear here.
+        </p>
+      ) : (
+        <ul className="passenger-history-list">
+          {historyRides.map((ride) => {
+            const isExpanded = expandedRideId === ride.id;
+            const rideHistory =
+              loadedHistory?.rideId === ride.id ? loadedHistory : null;
+            const rideError = loadError?.rideId === ride.id ? loadError : null;
+
+            return (
+              <li className="history-ride" key={ride.id}>
+                <button
+                  className="history-ride-toggle"
+                  type="button"
+                  aria-expanded={isExpanded}
+                  onClick={() => void toggleRideActivity(ride)}
+                >
+                  <span className="history-route">
+                    <strong>
+                      {ride.originZone.name} <i /> {ride.destinationZone.name}
+                    </strong>
+                    <small>
+                      {new Intl.DateTimeFormat("en-BD", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(new Date(ride.requestedAt))}
+                      {` / ${ride.seatsRequested} ${ride.seatsRequested === 1 ? "seat" : "seats"}`}
+                    </small>
+                  </span>
+                  <span
+                    className={`history-status history-status-${ride.status.toLowerCase()}`}
+                  >
+                    {ride.status.replaceAll("_", " ")}
+                  </span>
+                  <span className="history-toggle-label">
+                    {isExpanded ? "Hide activity" : "View activity"}
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="history-ride-details">
+                    {loadingRideId === ride.id && (
+                      <p className="history-loading" aria-live="polite">
+                        Loading ride activity...
+                      </p>
+                    )}
+                    {rideError && (
+                      <p className="ride-inline-error" role="alert">
+                        {rideError.message}
+                      </p>
+                    )}
+                    {rideHistory && (
+                      <>
+                        <ol className="ride-timeline">
+                          {rideHistory.entries.map((entry, index) => (
+                            <li className="ride-timeline-entry" key={entry.id}>
+                              <span
+                                className={`timeline-marker${index === rideHistory.entries.length - 1 ? " timeline-marker-current" : ""}`}
+                                aria-hidden="true"
+                              />
+                              <div className="timeline-entry-content">
+                                <div className="timeline-entry-heading">
+                                  <strong>{entry.status.replaceAll("_", " ")}</strong>
+                                  <time dateTime={entry.createdAt}>
+                                    {new Intl.DateTimeFormat("en-BD", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    }).format(new Date(entry.createdAt))}
+                                  </time>
+                                </div>
+                                {entry.note && <p>{entry.note}</p>}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                        {ride.status === "COMPLETED" && (
+                          <p className="history-payment">
+                            {rideHistory.payment ? (
+                              <>
+                                Final fare: {formatMoney(Number(rideHistory.payment.amount))}
+                                {` / ${rideHistory.payment.method === "CASH" ? "Cash" : "TeslaPay"}`}
+                                {` / ${rideHistory.payment.status}`}
+                              </>
+                            ) : (
+                              "Final fare record is not available."
+                            )}
+                          </p>
+                        )}
+                        {ride.status === "CANCELLED" && (
+                          <p className="history-payment">No payment was collected for this cancelled ride.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
