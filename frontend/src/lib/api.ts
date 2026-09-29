@@ -109,9 +109,20 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /**
+     * Lets the UI tell "the server said no" apart from "we never reached the
+     * server". Without this, every panel renders the same message and a
+     * switched-off backend looks like a bug in the app.
+     */
+    readonly kind: "http" | "network" | "timeout" = "http",
   ) {
     super(message);
     this.name = "ApiError";
+  }
+
+  /** True when retrying might plausibly work. */
+  get isTransient() {
+    return this.kind !== "http" || this.status >= 500;
   }
 }
 
@@ -128,6 +139,31 @@ const apiBaseUrl = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
 ).replace(/\/$/, "");
 
+// Without this, an API that accepts the connection and then never answers
+// leaves the panel spinning forever with no way back.
+const REQUEST_TIMEOUT_MS = 12_000;
+
+export const API_UNREACHABLE_MESSAGE =
+  "Can't reach the Dhaka Tesla Pool API. Check that the backend is running.";
+export const API_TIMEOUT_MESSAGE =
+  "The API took too long to respond. Try again.";
+
+/**
+ * A readable message for anything thrown by this module or by a component.
+ * Every panel needs this, and getting it wrong means showing the user a raw
+ * browser string like "Failed to fetch".
+ */
+export function errorText(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+/** True when the request never reached the API, so a retry may work. */
+export function isApiUnreachable(error: unknown): boolean {
+  return error instanceof ApiError && error.kind !== "http";
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -137,13 +173,33 @@ async function request<T>(
   if (init.body) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...init,
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (cause) {
+    // fetch() rejects for two very different reasons, and both arrive here as
+    // an opaque TypeError. Left alone, the panels render "Failed to fetch" —
+    // a browser string the user can do nothing with. AbortSignal.timeout()
+    // surfaces its own name, so the two can be told apart.
+    const timedOut =
+      cause instanceof DOMException && cause.name === "TimeoutError";
+
+    throw new ApiError(
+      timedOut ? API_TIMEOUT_MESSAGE : API_UNREACHABLE_MESSAGE,
+      timedOut ? 504 : 0,
+      timedOut ? "timeout" : "network",
+    );
+  }
+
   const payload = (await response.json().catch(() => null)) as
-    ApiEnvelope<T> | ApiFailure | null;
+    | ApiEnvelope<T>
+    | ApiFailure
+    | null;
 
   if (!response.ok) {
     const message =
@@ -151,11 +207,15 @@ async function request<T>(
     throw new ApiError(
       message ?? "The server could not complete your request.",
       response.status,
+      "http",
     );
   }
 
   if (!payload || !("data" in payload)) {
-    throw new Error("The server returned an unexpected response.");
+    throw new ApiError(
+      "The server returned an unexpected response.",
+      response.status,
+    );
   }
 
   return payload.data;
