@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
@@ -14,6 +15,13 @@ import { zoneRouter } from "./routes/zone.route.js";
 //  Express App
 const app = express();
 
+app.use(
+  cors({
+    origin: env.FRONTEND_ORIGIN,
+    methods: ["GET", "POST", "PATCH"],
+    allowedHeaders: ["Authorization", "Content-Type"],
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
