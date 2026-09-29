@@ -49,7 +49,7 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-// â”€â”€ Status badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Status badge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
   const label = status.replaceAll("_", " ");
@@ -65,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`driver-badge ${cls}`}>{label}</span>;
 }
 
-// â”€â”€ Payment status chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Payment status chip ───────────────────────────────────────────────────────
 
 function PaymentChip({ status }: { status: "PENDING" | "PAID" | "FAILED" }) {
   const cls =
@@ -75,7 +75,7 @@ function PaymentChip({ status }: { status: "PENDING" | "PAID" | "FAILED" }) {
   return <span className={`payment-chip ${cls}`}>{status}</span>;
 }
 
-// â”€â”€ Online toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Online toggle ─────────────────────────────────────────────────────────────
 
 interface OnlineToggleProps {
   token: string;
@@ -130,7 +130,7 @@ function OnlineToggle({ token, isOnline, onChange }: OnlineToggleProps) {
   );
 }
 
-// â”€â”€ Accept modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Accept modal ──────────────────────────────────────────────────────────────
 
 interface AcceptModalProps {
   token: string;
@@ -145,6 +145,49 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
   const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Escape closes, as it does in any dialog. Tab is trapped so focus cannot
+  // wander behind the overlay, where a keyboard user would be editing a page
+  // they cannot see.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (isSubmitting) return;
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), select:not([disabled]), input:not([disabled]), a[href]',
+      );
+      if (!focusable || focusable.length === 0) return;
+
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isSubmitting, onClose]);
+
+  // Move focus into the dialog, so a keyboard user is not left behind on the
+  // Accept button they just pressed, underneath the overlay.
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
 
   async function handleAccept() {
     if (!selectedVehicleId) return;
@@ -161,14 +204,14 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
   }
 
   return (
-    <div className="driver-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="accept-modal-heading">
+    <div className="driver-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="accept-modal-heading" ref={dialogRef}>
       <div className="driver-modal">
         <div className="driver-modal-header">
           <div>
             <p className="eyebrow">ACCEPT RIDE REQUEST</p>
-            <h2 id="accept-modal-heading">{ride.originZone.name} â†’ {ride.destinationZone.name}</h2>
+            <h2 id="accept-modal-heading">{ride.originZone.name} → {ride.destinationZone.name}</h2>
           </div>
-          <button className="driver-modal-close" type="button" onClick={onClose} aria-label="Close">âœ•</button>
+          <button ref={closeRef} className="driver-modal-close" type="button" onClick={onClose} aria-label="Close accept ride dialog">✕</button>
         </div>
 
         <div className="driver-modal-details">
@@ -203,7 +246,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.name} â€” {v.plateNumber} ({v.seatCapacity} seats)
+                  {v.name} — {v.plateNumber} ({v.seatCapacity} seats)
                 </option>
               ))}
             </select>
@@ -214,7 +257,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
           <div className="driver-modal-vehicle-note">
             <span className="ride-detail-label">VEHICLE</span>
             <strong>
-              {vehicles[0]!.name} â€” {vehicles[0]!.plateNumber} ({vehicles[0]!.seatCapacity} seats)
+              {vehicles[0]!.name} — {vehicles[0]!.plateNumber} ({vehicles[0]!.seatCapacity} seats)
             </strong>
           </div>
         )}
@@ -233,7 +276,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
             disabled={isSubmitting || vehicles.length === 0}
           >
             {isSubmitting ? "Accepting..." : "Accept ride"}
-            <span aria-hidden="true">â†’</span>
+            <span aria-hidden="true">→</span>
           </button>
           <button
             className="driver-cancel-modal-button"
@@ -249,7 +292,7 @@ function AcceptModal({ token, ride, vehicles, hasActivePool, onAccepted, onClose
   );
 }
 
-// â”€â”€ Open ride requests list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Open ride requests list ───────────────────────────────────────────────────
 
 interface OpenRequestsListProps {
   token: string;
@@ -264,6 +307,14 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
   const [error, setError] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingRide, setPendingRide] = useState<OpenRideRequest | null>(null);
+  const acceptButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  function closeModal() {
+    setPendingRide(null);
+    // Hand focus back to the card that opened the dialog, so a keyboard user
+    // is not dropped at the top of the page.
+    acceptButtonRef.current?.focus();
+  }
 
   async function loadRides(showRefresh = false) {
     if (showRefresh) setIsRefreshing(true);
@@ -344,8 +395,14 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
                 <span><span className="ride-detail-label">PAYMENT </span>{ride.paymentMethod === "CASH" ? "Cash" : "TeslaPay"}</span>
                 <span><span className="ride-detail-label">REQUESTED </span>{formatDate(ride.requestedAt)}</span>
               </div>
-              <button className="driver-accept-card-button" type="button" onClick={() => setPendingRide(ride)}>
-                Accept<span aria-hidden="true">â†’</span>
+              <button
+                ref={pendingRide?.id === ride.id ? acceptButtonRef : undefined}
+                className="driver-accept-card-button"
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => setPendingRide(ride)}
+              >
+                Accept<span aria-hidden="true">→</span>
               </button>
             </li>
           ))}
@@ -359,14 +416,14 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
           vehicles={vehicles}
           hasActivePool={hasActivePool}
           onAccepted={handleAccepted}
-          onClose={() => setPendingRide(null)}
+          onClose={closeModal}
         />
       )}
     </div>
   );
 }
 
-// â”€â”€ Passenger payment card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Passenger payment card ────────────────────────────────────────────────────
 // Loaded lazily after the trip completes so we don't call getPaymentForRide
 // during an active trip (payment record doesn't exist yet until completeTrip).
 
@@ -418,7 +475,7 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
     };
   }, [poolCompleted, rideRequestId, token, reloadKey]);
 
-  async function handleRetry() {
+  function handleRetry() {
     setIsLoading(true);
     setError("");
     setReloadKey((key) => key + 1);
@@ -457,7 +514,7 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
         <button
           className="driver-text-action"
           type="button"
-          onClick={() => void handleRetry()}
+          onClick={handleRetry}
         >
           Retry
         </button>
@@ -505,7 +562,7 @@ function PassengerPaymentCard({ token, member, poolCompleted }: PassengerPayment
   );
 }
 
-// â”€â”€ Lifecycle actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Lifecycle actions ─────────────────────────────────────────────────────────
 
 interface LifecycleActionsProps {
   token: string;
@@ -524,7 +581,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
     onError("");
     try {
       const updated = await action();
-      // COMPLETED and CANCELLED pools are no longer "active" â€”
+      // COMPLETED and CANCELLED pools are no longer "active" —
       // pass them up so the parent can move the pool out of the active slot
       // while still rendering the final state (parent decides).
       onPoolUpdated(updated);
@@ -542,7 +599,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
       <p className="eyebrow">TRIP ACTIONS</p>
 
       <div className="lifecycle-buttons">
-        {/* OPEN â†’ arrive */}
+        {/* OPEN → arrive */}
         {status === "OPEN" && (
           <button
             className="lifecycle-btn lifecycle-btn-arrive"
@@ -554,7 +611,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
           </button>
         )}
 
-        {/* DRIVER_ARRIVED â†’ start */}
+        {/* DRIVER_ARRIVED → start */}
         {status === "DRIVER_ARRIVED" && (
           <button
             className="lifecycle-btn lifecycle-btn-start"
@@ -566,7 +623,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
           </button>
         )}
 
-        {/* STARTED â†’ complete */}
+        {/* STARTED → complete */}
         {status === "STARTED" && (
           <button
             className="lifecycle-btn lifecycle-btn-complete"
@@ -633,7 +690,7 @@ function LifecycleActions({ token, pool, onPoolUpdated, onError }: LifecycleActi
   );
 }
 
-// â”€â”€ Active pool view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Active pool view ──────────────────────────────────────────────────────────
 
 interface ActivePoolViewProps {
   token: string;
@@ -642,7 +699,7 @@ interface ActivePoolViewProps {
 }
 
 function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
-  // localPool overrides the parent prop after a lifecycle action fires â€”
+  // localPool overrides the parent prop after a lifecycle action fires —
   // avoids a useEffect sync which triggers the set-state-in-effect lint rule.
   const [localPool, setLocalPool] = useState<ActivePool | null>(null);
   const currentPool = localPool ?? pool;const [timeline, setTimeline] = useState<PoolTimelineEntry[]>([]);
@@ -710,7 +767,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
       <div className="driver-section-heading">
         <div>
           <p className="eyebrow">DRIVER / ACTIVE TRIP</p>
-          <h2>{currentPool.originZone.name} â†’ {currentPool.destinationZone.name}</h2>
+          <h2>{currentPool.originZone.name} → {currentPool.destinationZone.name}</h2>
         </div>
         <div className="driver-heading-right">
           <StatusBadge status={currentPool.status} />
@@ -746,7 +803,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
         </div>
       </div>
 
-      {/* Lifecycle action buttons â€” not shown for terminal states */}
+      {/* Lifecycle action buttons — not shown for terminal states */}
       {!isTerminal && (
         <LifecycleActions
           token={token}
@@ -776,7 +833,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                 <div className="driver-passenger-route">
                   <span className="ride-detail-label">ROUTE</span>
                   <span>
-                    {member.rideRequest.originZone.name} â†’ {member.rideRequest.destinationZone.name}
+                    {member.rideRequest.originZone.name} → {member.rideRequest.destinationZone.name}
                   </span>
                 </div>
                 <div className="driver-passenger-seats">
@@ -817,7 +874,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
                   <div className="timeline-entry-heading">
                     <strong>
                       {entry.rideRequest
-                        ? `${entry.rideRequest.passenger.name} â€” ${String(entry.status).replaceAll("_", " ")}`
+                        ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
                         : String(entry.status).replaceAll("_", " ")}
                     </strong>
                     <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
@@ -833,7 +890,7 @@ function ActivePoolView({ token, pool, onPoolUpdated }: ActivePoolViewProps) {
   );
 }
 
-// â”€â”€ Pool history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Pool history ──────────────────────────────────────────────────────────────
 
 interface PoolHistoryListProps {
   token: string;
@@ -909,7 +966,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                   onClick={() => void toggleTimeline(pool.id)}
                 >
                   <span className="driver-history-route">
-                    <strong>{pool.originZone.name} â†’ {pool.destinationZone.name}</strong>
+                    <strong>{pool.originZone.name} → {pool.destinationZone.name}</strong>
                     <small>
                       {formatDate(pool.createdAt)} / {pool.vehicle.name} /{" "}
                       {pool.maxSeats - pool.availableSeats} passenger
@@ -940,7 +997,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
                               <div className="timeline-entry-heading">
                                 <strong>
                                   {entry.rideRequest
-                                    ? `${entry.rideRequest.passenger.name} â€” ${String(entry.status).replaceAll("_", " ")}`
+                                    ? `${entry.rideRequest.passenger.name} — ${String(entry.status).replaceAll("_", " ")}`
                                     : String(entry.status).replaceAll("_", " ")}
                                 </strong>
                                 <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
@@ -964,7 +1021,7 @@ function PoolHistoryList({ token }: PoolHistoryListProps) {
   );
 }
 
-// â”€â”€ Main driver panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main driver panel ─────────────────────────────────────────────────────────
 
 export default function DriverPanel({ token, driverName }: DriverPanelProps) {
   const [isOnline, setIsOnline] = useState(false);
@@ -1023,10 +1080,13 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
           <p className="eyebrow">DRIVER WORKSPACE</p>
           <h1 id="driver-heading">Good morning, {driverName}.</h1>
         </div>
-        <div className="driver-view-tabs" role="tablist">
+        <div className="driver-view-tabs" role="tablist" aria-label="Driver workspace views">
           <button
+            id="driver-tab-dashboard"
             role="tab"
             aria-selected={view === "dashboard"}
+            aria-controls="driver-panel-dashboard"
+            tabIndex={view === "dashboard" ? 0 : -1}
             className={view === "dashboard" ? "driver-tab-active" : ""}
             type="button"
             onClick={() => setView("dashboard")}
@@ -1034,8 +1094,11 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
             Dashboard
           </button>
           <button
+            id="driver-tab-history"
             role="tab"
             aria-selected={view === "history"}
+            aria-controls="driver-panel-history"
+            tabIndex={view === "history" ? 0 : -1}
             className={view === "history" ? "driver-tab-active" : ""}
             type="button"
             onClick={() => setView("history")}
@@ -1046,9 +1109,19 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
       </div>
 
       {view === "history" ? (
-        <PoolHistoryList token={token} />
+        <div
+          id="driver-panel-history"
+          role="tabpanel"
+          aria-labelledby="driver-tab-history"
+        >
+          <PoolHistoryList token={token} />
+        </div>
       ) : (
-        <>
+        <div
+          id="driver-panel-dashboard"
+          role="tabpanel"
+          aria-labelledby="driver-tab-dashboard"
+        >
           <OnlineToggle token={token} isOnline={isOnline} onChange={setIsOnline} />
 
           {activePool ? (
@@ -1061,19 +1134,32 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
               }}
             />
           ) : isOnline ? (
-            <OpenRequestsList
-              token={token}
-              vehicles={vehicles}
-              hasActivePool={false}
-              onAccepted={(pool) => setActivePool(pool)}
-            />
+            <>
+              {/* Online with no Tesla: the requests list would still load and
+                  offer an Accept button that can only fail. Say so up front. */}
+              {vehicles.length === 0 && (
+                <div className="driver-no-vehicle" role="status">
+                  <p className="eyebrow">NO TESLA REGISTERED</p>
+                  <p>
+                    You are online, but ride requests need a vehicle before you
+                    can accept one. Register a Tesla to start taking trips.
+                  </p>
+                </div>
+              )}
+              <OpenRequestsList
+                token={token}
+                vehicles={vehicles}
+                hasActivePool={false}
+                onAccepted={(pool) => setActivePool(pool)}
+              />
+            </>
           ) : (
             <div className="driver-offline-hint">
               <p className="eyebrow">WAITING</p>
               <p>Go online above to start seeing ride requests.</p>
             </div>
           )}
-        </>
+        </div>
       )}
     </section>
   );

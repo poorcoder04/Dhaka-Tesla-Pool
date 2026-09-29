@@ -2208,6 +2208,28 @@ a:focus-visible {
   font-size: 14px;
 }
 
+/* Online with no vehicle registered — a blocking problem, so it reads
+   stronger than the "waiting" hint above. */
+.driver-no-vehicle {
+  padding: 20px 22px;
+  border: 1px solid #e4d9c4;
+  border-left: 3px solid #b08237;
+  border-radius: 6px;
+  background: #fdfaf3;
+}
+
+.driver-no-vehicle .eyebrow {
+  margin-bottom: 8px;
+  color: #8a6010;
+}
+
+.driver-no-vehicle p:last-child {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 /* ── Shared utility states ────────────────────────────────────────────────── */
 
 .driver-loading {
