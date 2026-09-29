@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  cancelRideRequest,
   createRideRequest,
   estimateRideFare,
   getRideRequest,
@@ -34,6 +35,12 @@ const ACTIVE_RIDE_STATUSES: RideStatus[] = [
   "MATCHED",
   "DRIVER_ARRIVED",
   "STARTED",
+];
+
+const CANCELLABLE_RIDE_STATUSES: RideStatus[] = [
+  "REQUESTED",
+  "MATCHED",
+  "DRIVER_ARRIVED",
 ];
 
 function formatMoney(amount: number): string {
@@ -72,13 +79,18 @@ export default function RideRequestPanel({
   const [zoneError, setZoneError] = useState("");
   const [ridesError, setRidesError] = useState("");
   const [trackingError, setTrackingError] = useState("");
+  const [cancellationError, setCancellationError] = useState("");
   const [estimateError, setEstimateError] = useState("");
   const [requestError, setRequestError] = useState("");
   const [isLoadingZones, setIsLoadingZones] = useState(true);
   const [isLoadingRides, setIsLoadingRides] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isConfirmingCancellation, setIsConfirmingCancellation] =
+    useState(false);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancelledRide, setCancelledRide] = useState<PassengerRide | null>(null);
   const quoteSequence = useRef(0);
 
   useEffect(() => {
@@ -267,6 +279,56 @@ export default function RideRequestPanel({
     }
   }
 
+  async function handleViewCreatedRide() {
+    setRide(null);
+    setIsLoadingRides(true);
+    setRidesError("");
+
+    try {
+      setPassengerRides(await getMyRideRequests(token));
+    } catch (error) {
+      setRidesError(
+        error instanceof Error
+          ? error.message
+          : "Could not load your ride request.",
+      );
+    } finally {
+      setIsLoadingRides(false);
+    }
+  }
+
+  async function handleCancelRide() {
+    if (
+      !activeRide ||
+      !CANCELLABLE_RIDE_STATUSES.includes(activeRide.status)
+    ) {
+      return;
+    }
+
+    setIsCancelling(true);
+    setCancellationError("");
+
+    try {
+      const cancelled = await cancelRideRequest(token, activeRide.id);
+      setPassengerRides((rides) =>
+        rides.map((item) =>
+          item.id === cancelled.id ? { ...item, ...cancelled } : item,
+        ),
+      );
+      setIsConfirmingCancellation(false);
+      setCancelledRide(cancelled);
+    } catch (error) {
+      setCancellationError(
+        error instanceof Error
+          ? error.message
+          : "Could not cancel this ride. Refresh its status and try again.",
+      );
+      setIsConfirmingCancellation(false);
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   if (ride) {
     return (
       <section
@@ -312,6 +374,37 @@ export default function RideRequestPanel({
           Your fare is estimated before pooling. A shared ride may cost less
           depending on how many seats are occupied.
         </p>
+        <button
+          className="request-button"
+          type="button"
+          onClick={handleViewCreatedRide}
+        >
+          Track this request
+          <span aria-hidden="true">-&gt;</span>
+        </button>
+      </section>
+    );
+  }
+
+  if (cancelledRide) {
+    return (
+      <section
+        className="ride-content"
+        aria-labelledby="ride-cancelled-heading"
+      >
+        <div className="ride-success-mark" aria-hidden="true">OK</div>
+        <p className="eyebrow">REQUEST CANCELLED</p>
+        <h1 id="ride-cancelled-heading">Your request was cancelled.</h1>
+        <p className="ride-intro">
+          {cancelledRide.originZone.name} to {cancelledRide.destinationZone.name}
+        </p>
+        <button
+          className="estimate-button"
+          type="button"
+          onClick={() => setCancelledRide(null)}
+        >
+          Request another ride
+        </button>
       </section>
     );
   }
@@ -443,6 +536,56 @@ export default function RideRequestPanel({
                 </li>
               ))}
             </ol>
+          )}
+
+          {CANCELLABLE_RIDE_STATUSES.includes(activeRide.status) ? (
+            isConfirmingCancellation ? (
+              <div className="cancellation-confirmation" role="group" aria-label="Confirm ride cancellation">
+                <div>
+                  <strong>Cancel this ride request?</strong>
+                  <p>This cannot be undone.</p>
+                </div>
+                <div className="cancellation-actions">
+                  <button
+                    className="confirm-cancel-button"
+                    type="button"
+                    onClick={handleCancelRide}
+                    disabled={isCancelling}
+                  >
+                    {isCancelling ? "Cancelling..." : "Confirm cancellation"}
+                  </button>
+                  <button
+                    className="keep-ride-button"
+                    type="button"
+                    onClick={() => setIsConfirmingCancellation(false)}
+                    disabled={isCancelling}
+                  >
+                    Keep ride
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="cancel-ride-button"
+                type="button"
+                onClick={() => {
+                  setCancellationError("");
+                  setIsConfirmingCancellation(true);
+                }}
+              >
+                Cancel ride
+              </button>
+            )
+          ) : (
+            <p className="ride-note">
+              This trip has started; cancellation is no longer available.
+            </p>
+          )}
+
+          {cancellationError && (
+            <p className="ride-inline-error" role="alert">
+              {cancellationError}
+            </p>
           )}
         </div>
       </section>
