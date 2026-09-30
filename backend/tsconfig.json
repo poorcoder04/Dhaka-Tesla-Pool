@@ -17,6 +17,15 @@
     "declaration": true,
     "declarationMap": true,
 
+    // Prisma 7's generated client imports its own siblings with explicit .ts
+    // specifiers ("import * as $Enums from './enums.ts'"). tsx resolves those
+    // fine, which is why development never noticed, but tsc copies them
+    // through verbatim and the compiled output then asks Node for a .ts file
+    // that does not exist: ERR_MODULE_NOT_FOUND on dist/generated/prisma/enums.ts
+    // and the server crash-loops on start. This rewrites the specifiers to .js
+    // on emit. Required by the Prisma 7 client generator, not a preference.
+    "rewriteRelativeImportExtensions": true,
+
     // Strict checks
     "strict": true,
     "noUncheckedIndexedAccess": true,
