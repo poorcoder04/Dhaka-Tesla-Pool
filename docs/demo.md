@@ -90,6 +90,8 @@ Known limitations rather than implying the screenshots are exhaustive.
 
 ## Video outline (6 minutes)
 
+The full word-for-word script is in [`video-script.md`](video-script.md).
+
 Walk the 13 steps above, driving the live deployment at
 **https://dhaka-tesla-pool-web-9ejc.onrender.com** so the URL is visible on
 screen. Wait out the 30–50s cold start before recording.

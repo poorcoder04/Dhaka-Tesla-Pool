@@ -5,9 +5,30 @@ drivers running a Tesla ("Bullet") fill their remaining seats with passengers
 heading a compatible way. Fares drop as the pool fills — 30 BDT base plus
 15 BDT/km, minus a pooled-seat discount of up to 30%.
 
-> **Status:** working end to end. `docker compose up` from a clean clone gives
-> you a seeded database, a REST API, and a passenger/driver web app.
+> **Status:** working end to end, deployed, and recorded.
+> `docker compose up` from a clean clone gives you a seeded database, a REST
+> API, and a passenger/driver web app.
 > See [Known limitations](#known-limitations) for what it deliberately does not do.
+
+## Submission
+
+| | |
+| --- | --- |
+| Live app | **https://dhaka-tesla-pool-web-9ejc.onrender.com** |
+| Live API | https://dhaka-tesla-pool-api-eza3.onrender.com |
+| Demo video (6 min) | **[Watch on Veed](https://www.veed.io/view/ea1d15b2-d964-43cd-9041-0bb8dfd79d55)** |
+| Repository | https://github.com/poorcoder04/Dhaka-Tesla-Pool |
+| Demo accounts | Jashim `01700000001`, Nusrat `01700000002`, Rafiq `01700000003`, Shirin `01700000004`, password `DhakaPoolDemo123!` |
+| Tests | 52 passing — 22 unit, 30 integration against real PostgreSQL |
+| Release | [`v1.0.0`](https://github.com/poorcoder04/Dhaka-Tesla-Pool/releases/tag/v1.0.0) |
+
+The video covers the problem, the engineering — including the atomic seat claim
+and the test that proves it — and a full product tour with both refusals.
+
+> **The live services sleep.** Render's free tier spins down after ~15 minutes
+> idle, so the first request takes 30–50 seconds while the service wakes. Wait
+> it out; nothing is broken. The same build runs without that delay under
+> `docker compose`.
 
 ## Live demo
 
@@ -22,11 +43,6 @@ Deployed on Render's free tier, against a Neon PostgreSQL database.
 Sign in with any of the [demo accounts](#demo-accounts) below — the live database
 is seeded with the same four people.
 
-> **First request takes 30–50 seconds.** Render's free tier spins idle services
-> down after ~15 minutes of inactivity, so a cold start happens on every visit
-> after a pause. This is a hosting-plan limit, not an application one; the same
-> build runs without it under Docker.
-
 Full deployment steps, including the environment variables and the
 `NEXT_PUBLIC_API_URL` rebuild caveat, are in
 [`docs/deployment.md`](docs/deployment.md).
@@ -35,6 +51,7 @@ Full deployment steps, including the environment variables and the
 
 | Section | |
 | --- | --- |
+| [Submission](#submission) | Links, credentials and status at a glance |
 | [Live demo](#live-demo) | Try it in a browser |
 | [Demo accounts](#demo-accounts) | Log in as a driver or passenger |
 | [Running the project](#running-the-project) | Docker, or local development |
@@ -672,6 +689,7 @@ was a question.
 | [`docs/database-design.md`](docs/database-design.md) | ERD, full schema, constraints, design notes |
 | [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
 | [`docs/demo.md`](docs/demo.md) | Demo credentials, walkthrough, fares, video outline |
+| [`docs/video-script.md`](docs/video-script.md) | The 6-minute video script, word for word, and [the recording](https://www.veed.io/view/ea1d15b2-d964-43cd-9041-0bb8dfd79d55) |
 | [`docs/deployment.md`](docs/deployment.md) | Deploying to Render + Neon, step by step, and the gotchas |
 | [`docs/working-flow-and-commands.md`](docs/working-flow-and-commands.md) | Everyday commands, the dev loop, and the env vars |
 | [`docs/build-log.md`](docs/build-log.md) | Step-by-step record of how it was built |
