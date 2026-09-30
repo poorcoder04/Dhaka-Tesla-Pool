@@ -1,233 +1,340 @@
 # Dhaka Tesla Pool — Database Design (PostgreSQL)
 
+Describes the schema that is actually implemented. The source of truth is
+[`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) and the
+DDL applied by
+[`20260929151000_step07_baseline`](../backend/prisma/migrations/20260929151000_step07_baseline/migration.sql).
+Where this document and those two files disagree, they are wrong.
+
+> **Note on naming.** Columns are camelCase and tables are snake_case. Only the
+> table names are remapped, via `@@map` on each model. Column names are the
+> Prisma field names, unmodified — the SQL is `"availableSeats"`, not
+> `available_seats`. The first draft of this document specified snake_case
+> columns throughout; that was never built.
+
 ## 1. Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
-    USERS ||--o{ VEHICLES : "owns (driver)"
-    USERS ||--o{ RIDE_REQUESTS : "makes (passenger)"
-    USERS ||--o{ RIDE_STATUS_HISTORY : "triggers change"
-    VEHICLES ||--o{ POOLS : "runs"
-    ZONES ||--o{ RIDE_REQUESTS : "pickup"
-    ZONES ||--o{ RIDE_REQUESTS : "dropoff"
-    POOLS ||--o{ POOL_MEMBERSHIPS : "contains"
-    RIDE_REQUESTS ||--o| POOL_MEMBERSHIPS : "joins"
-    RIDE_REQUESTS ||--o{ RIDE_STATUS_HISTORY : "logs"
-    RIDE_REQUESTS ||--o| PAYMENTS : "settled by"
+    users ||--o{ vehicles : "owns (CASCADE)"
+    users ||--o{ ride_requests : "requests (RESTRICT)"
+    users ||--o{ pools : "drives (RESTRICT)"
+    users ||--o{ pool_memberships : "joins (RESTRICT)"
+    users ||--o{ payments : "pays (RESTRICT)"
+    zones ||--o{ pools : "origin"
+    zones ||--o{ pools : "destination"
+    zones ||--o{ ride_requests : "pickup"
+    zones ||--o{ ride_requests : "dropoff"
+    vehicles ||--o{ pools : "serves"
+    pools ||--o{ ride_requests : "matches"
+    pools ||--o{ pool_memberships : "has"
+    ride_requests ||--|| pool_memberships : "joins via"
+    ride_requests ||--o| payments : "settles via"
+    ride_requests ||--o{ ride_status_history : "logs"
+    pools ||--o{ ride_status_history : "logs"
 
-    USERS {
-        uuid id PK
-        text name
-        text email UK
-        text password_hash
-        text role "PASSENGER or DRIVER"
-        timestamptz created_at
+    users {
+        TEXT id PK "cuid()"
+        TEXT name
+        TEXT email UK "nullable"
+        TEXT phone UK
+        UserRole role "default PASSENGER"
+        TEXT password "bcrypt hash, nullable"
+        Decimal walletBalance "default 1000.00"
+        Boolean isActive "default true"
+        Boolean isOnline "drivers only"
     }
 
-    VEHICLES {
-        uuid id PK
-        uuid driver_id FK
-        text model_name
-        text license_plate_no UK
-        int seat_capacity
-        timestamptz created_at
+    zones {
+        TEXT id PK "cuid()"
+        TEXT name UK
+        TEXT description "nullable"
+        Boolean isActive "default true"
     }
 
-    ZONES {
-        uuid id PK
-        text name UK
-        numeric lat
-        numeric lng
+    vehicles {
+        TEXT id PK "cuid()"
+        TEXT ownerId FK
+        TEXT name
+        TEXT model "nullable"
+        TEXT plateNumber UK "nullable"
+        Int seatCapacity
+        Boolean isActive "default true"
     }
 
-    POOLS {
-        uuid id PK
-        uuid vehicle_id FK
-        text status "OPEN, MATCHED, DRIVER_ARRIVED, STARTED, COMPLETED, CANCELLED"
-        int available_seats
-        int version "optimistic lock"
-        timestamptz driver_arrived_at
-        timestamptz started_at
-        timestamptz completed_at
-        timestamptz created_at
+    pools {
+        TEXT id PK "cuid()"
+        TEXT driverId FK
+        TEXT vehicleId FK
+        TEXT originZoneId FK
+        TEXT destinationZoneId FK
+        PoolStatus status "default OPEN"
+        Int maxSeats
+        Int availableSeats
+        TIMESTAMP scheduledAt "nullable"
+        TIMESTAMP startedAt "nullable"
+        TIMESTAMP completedAt "nullable"
+        TIMESTAMP cancelledAt "nullable"
     }
 
-    RIDE_REQUESTS {
-        uuid id PK
-        uuid passenger_id FK
-        uuid pool_id FK "nullable until matched"
-        uuid pickup_zone_id FK
-        uuid dropoff_zone_id FK
-        int seats_requested
-        text status "REQUESTED, MATCHED, DRIVER_ARRIVED, STARTED, COMPLETED, CANCELLED"
-        int base_fare_poysha
-        int distance_charge_poysha
-        int pool_discount_poysha
-        int fare_poysha "total, = base + distance - discount"
-        timestamptz requested_at
-        timestamptz matched_at
-        timestamptz cancelled_at
-        timestamptz created_at
+    ride_requests {
+        TEXT id PK "cuid()"
+        TEXT passengerId FK
+        TEXT originZoneId FK
+        TEXT destinationZoneId FK
+        Int seatsRequested "default 1"
+        PaymentMethod paymentMethod "default CASH"
+        RideStatus status "default REQUESTED"
+        TEXT poolId FK "nullable until matched"
+        TIMESTAMP matchedAt "nullable"
+        TIMESTAMP cancelledAt "nullable"
     }
 
-    POOL_MEMBERSHIPS {
-        uuid id PK
-        uuid pool_id FK
-        uuid ride_request_id FK UK
-        timestamptz joined_at
+    pool_memberships {
+        TEXT id PK "cuid()"
+        TEXT poolId FK
+        TEXT rideRequestId FK "UNIQUE"
+        TEXT userId FK "denormalized"
+        Int seatsTaken "default 1"
     }
 
-    RIDE_STATUS_HISTORY {
-        uuid id PK
-        uuid ride_request_id FK
-        text from_status
-        text to_status
-        uuid changed_by_user_id FK
-        timestamptz changed_at
+    ride_status_history {
+        TEXT id PK "cuid()"
+        TEXT rideRequestId FK "nullable"
+        TEXT poolId FK "nullable"
+        RideStatus status
+        TEXT note "nullable"
+        TEXT changedById "no FK"
     }
 
-    PAYMENTS {
-        uuid id PK
-        uuid ride_request_id FK UK
-        text method "CASH or WALLET"
-        int amount_poysha
-        text status "PENDING, PAID, FAILED"
-        timestamptz paid_at
+    payments {
+        TEXT id PK "cuid()"
+        TEXT rideRequestId FK "UNIQUE"
+        TEXT userId FK
+        Decimal amount
+        Decimal baseFare "default 30.00"
+        Decimal distanceCharge "default 0.00"
+        Decimal poolDiscount "default 0.00"
+        Json fareBreakdown "nullable"
+        PaymentMethod method
+        PaymentStatus status "default PENDING"
+        TEXT transactionId "nullable"
+        TIMESTAMP paidAt "nullable"
     }
 ```
 
-## 2. Table-by-table schema (DDL)
+## 2. Table-by-table schema
+
+The real DDL, abbreviated to the columns that carry meaning. Enum types and
+`createdAt`/`updatedAt` on every table are omitted for readability. Full text
+is in the migration.
 
 ```sql
-CREATE TYPE user_role AS ENUM ('PASSENGER', 'DRIVER');
-CREATE TYPE pool_status AS ENUM ('OPEN', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED', 'COMPLETED', 'CANCELLED');
-CREATE TYPE ride_status AS ENUM ('REQUESTED', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED', 'COMPLETED', 'CANCELLED');
-CREATE TYPE payment_method AS ENUM ('CASH', 'WALLET');
-CREATE TYPE payment_status AS ENUM ('PENDING', 'PAID', 'FAILED');
-
-CREATE TABLE users (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name            TEXT NOT NULL,
-    email           TEXT NOT NULL UNIQUE,
-    password_hash   TEXT NOT NULL,
-    role            user_role NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- lets vehicles.driver_id FK to a role-checked subset (see note below)
-    UNIQUE (id, role)
+CREATE TABLE "users" (
+    "id"            TEXT PRIMARY KEY,          -- cuid(), generated in Prisma
+    "name"          TEXT NOT NULL,
+    "email"         TEXT UNIQUE,               -- nullable: drivers may omit it
+    "phone"         TEXT NOT NULL UNIQUE,
+    "role"          "UserRole" NOT NULL DEFAULT 'PASSENGER',
+    "password"      TEXT,                      -- bcrypt hash
+    "walletBalance" DECIMAL(10,2) NOT NULL DEFAULT 1000.00,
+    "isActive"      BOOLEAN NOT NULL DEFAULT true,
+    "isOnline"      BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE zones (
-    id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name    TEXT NOT NULL UNIQUE,      -- e.g. 'Banani', 'Gulshan 1', 'Mohakhali'
-    lat     NUMERIC(9,6) NOT NULL,
-    lng     NUMERIC(9,6) NOT NULL
+CREATE TABLE "zones" (
+    "id"          TEXT PRIMARY KEY,
+    "name"        TEXT NOT NULL UNIQUE,
+    "description" TEXT,
+    "isActive"    BOOLEAN NOT NULL DEFAULT true
+    -- No lat/lng. See "Distance without coordinates" below.
 );
 
-CREATE TABLE vehicles (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    driver_id         UUID NOT NULL,
-    driver_role       user_role NOT NULL DEFAULT 'DRIVER',
-    model_name        TEXT NOT NULL,
-    license_plate_no  TEXT NOT NULL UNIQUE,
-    seat_capacity     INT NOT NULL CHECK (seat_capacity > 0),
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-    FOREIGN KEY (driver_id, driver_role) REFERENCES users (id, role)
+CREATE TABLE "vehicles" (
+    "id"           TEXT PRIMARY KEY,
+    "ownerId"      TEXT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "name"         TEXT NOT NULL,
+    "model"        TEXT,
+    "plateNumber"  TEXT UNIQUE,
+    "seatCapacity" INTEGER NOT NULL
 );
 
-CREATE TABLE pools (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    vehicle_id          UUID NOT NULL REFERENCES vehicles (id),
-    status              pool_status NOT NULL DEFAULT 'OPEN',
-    available_seats     INT NOT NULL CHECK (available_seats >= 0),
-    version             INT NOT NULL DEFAULT 0,          -- optimistic locking
-    driver_arrived_at   TIMESTAMPTZ,
-    started_at          TIMESTAMPTZ,
-    completed_at        TIMESTAMPTZ,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE "pools" (
+    "id"                TEXT PRIMARY KEY,
+    "driverId"          TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+    "vehicleId"         TEXT NOT NULL REFERENCES "vehicles"("id") ON DELETE RESTRICT,
+    "originZoneId"      TEXT NOT NULL REFERENCES "zones"("id") ON DELETE RESTRICT,
+    "destinationZoneId" TEXT NOT NULL REFERENCES "zones"("id") ON DELETE RESTRICT,
+    "status"            "PoolStatus" NOT NULL DEFAULT 'OPEN',
+    "maxSeats"          INTEGER NOT NULL,
+    "availableSeats"    INTEGER NOT NULL,
+    "scheduledAt"       TIMESTAMP(3),
+    "startedAt"         TIMESTAMP(3),
+    "completedAt"       TIMESTAMP(3),
+    "cancelledAt"       TIMESTAMP(3)
+    -- No `version` column. Concurrency uses a conditional UPDATE, not an
+    -- optimistic version counter. See "Seat capacity" below.
 );
 
-CREATE TABLE ride_requests (
-    id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    passenger_id              UUID NOT NULL,
-    passenger_role            user_role NOT NULL DEFAULT 'PASSENGER',
-    pool_id                   UUID REFERENCES pools (id),   -- NULL until matched
-    pickup_zone_id            UUID NOT NULL REFERENCES zones (id),
-    dropoff_zone_id           UUID NOT NULL REFERENCES zones (id),
-    seats_requested           INT NOT NULL CHECK (seats_requested > 0),
-    status                    ride_status NOT NULL DEFAULT 'REQUESTED',
-    base_fare_poysha          INT NOT NULL,
-    distance_charge_poysha    INT NOT NULL,
-    pool_discount_poysha      INT NOT NULL DEFAULT 0,
-    fare_poysha               INT GENERATED ALWAYS AS
-                                 (base_fare_poysha + distance_charge_poysha - pool_discount_poysha) STORED,
-    requested_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
-    matched_at                TIMESTAMPTZ,
-    cancelled_at              TIMESTAMPTZ,
-    created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (pickup_zone_id <> dropoff_zone_id),
-    FOREIGN KEY (passenger_id, passenger_role) REFERENCES users (id, role)
+CREATE TABLE "ride_requests" (
+    "id"                TEXT PRIMARY KEY,
+    "passengerId"       TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+    "originZoneId"      TEXT NOT NULL REFERENCES "zones"("id") ON DELETE RESTRICT,
+    "destinationZoneId" TEXT NOT NULL REFERENCES "zones"("id") ON DELETE RESTRICT,
+    "seatsRequested"    INTEGER NOT NULL DEFAULT 1,
+    "paymentMethod"     "PaymentMethod" NOT NULL DEFAULT 'CASH',
+    "status"            "RideStatus" NOT NULL DEFAULT 'REQUESTED',
+    "poolId"            TEXT REFERENCES "pools"("id") ON DELETE SET NULL
 );
 
-CREATE TABLE pool_memberships (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    pool_id           UUID NOT NULL REFERENCES pools (id),
-    ride_request_id   UUID NOT NULL UNIQUE REFERENCES ride_requests (id),
-    joined_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE "pool_memberships" (
+    "id"            TEXT PRIMARY KEY,
+    "poolId"        TEXT NOT NULL REFERENCES "pools"("id") ON DELETE CASCADE,
+    "rideRequestId" TEXT NOT NULL UNIQUE REFERENCES "ride_requests"("id") ON DELETE CASCADE,
+    "userId"        TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+    "seatsTaken"    INTEGER NOT NULL DEFAULT 1,
+    CONSTRAINT "pool_memberships_poolId_userId_key" UNIQUE ("poolId", "userId")
 );
 
-CREATE TABLE ride_status_history (
-    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ride_request_id      UUID NOT NULL REFERENCES ride_requests (id),
-    from_status          ride_status,
-    to_status            ride_status NOT NULL,
-    changed_by_user_id   UUID REFERENCES users (id),
-    changed_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE "ride_status_history" (
+    "id"            TEXT PRIMARY KEY,
+    "rideRequestId" TEXT REFERENCES "ride_requests"("id") ON DELETE CASCADE,
+    "poolId"        TEXT REFERENCES "pools"("id") ON DELETE CASCADE,
+    "status"        "RideStatus" NOT NULL,
+    "note"          TEXT,
+    "changedById"   TEXT   -- deliberately not an FK; see note below
 );
 
-CREATE TABLE payments (
-    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ride_request_id    UUID NOT NULL UNIQUE REFERENCES ride_requests (id),
-    method             payment_method NOT NULL,
-    amount_poysha      INT NOT NULL,
-    status             payment_status NOT NULL DEFAULT 'PENDING',
-    paid_at            TIMESTAMPTZ
+CREATE TABLE "payments" (
+    "id"             TEXT PRIMARY KEY,
+    "rideRequestId"  TEXT NOT NULL UNIQUE REFERENCES "ride_requests"("id") ON DELETE RESTRICT,
+    "userId"         TEXT NOT NULL REFERENCES "users"("id") ON DELETE RESTRICT,
+    "amount"         DECIMAL(10,2) NOT NULL,
+    "baseFare"       DECIMAL(10,2) NOT NULL DEFAULT 30.00,
+    "distanceCharge" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "poolDiscount"   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "fareBreakdown"  JSONB,
+    "method"         "PaymentMethod" NOT NULL,
+    "status"         "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "transactionId"  TEXT,
+    "paidAt"         TIMESTAMP(3)
 );
-
--- Indexes for the access patterns the app actually needs
-CREATE INDEX idx_ride_requests_status ON ride_requests (status);
-CREATE INDEX idx_ride_requests_passenger ON ride_requests (passenger_id);
-CREATE INDEX idx_ride_requests_pool ON ride_requests (pool_id);
-CREATE INDEX idx_pools_vehicle ON pools (vehicle_id);
-CREATE INDEX idx_pools_status ON pools (status);
-CREATE INDEX idx_vehicles_driver ON vehicles (driver_id);
-CREATE INDEX idx_ride_status_history_ride ON ride_status_history (ride_request_id);
 ```
 
-## 3. Design notes worth putting in the README
+## 3. Constraints that exist
 
-**Money storage.** Every fare/amount column is `INT` in poysha (1 taka = 100 poysha) — integer minor units, never `NUMERIC`/`FLOAT` for currency, so rounding errors can't creep into split fares.
+Only unique indexes and foreign keys. Notably, **there are no `CHECK`
+constraints anywhere in the schema** — no `CHECK (availableSeats >= 0)`, no
+`CHECK (seatCapacity > 0)`, no `CHECK (seatsRequested > 0)`. An earlier draft
+of this document claimed all three. They are not in the migration, and they
+are not in `schema.prisma`. Seat arithmetic is trusted to application code.
 
-**Fare is a generated column.** `fare_poysha` is `GENERATED ALWAYS AS (base + distance - discount) STORED`, so the total can never drift from its components — the evaluator (or a test) can verify `base_fare_poysha + distance_charge_poysha - pool_discount_poysha = fare_poysha` directly from one row, by hand, exactly as Section 5 asks.
+| Index | Purpose |
+| --- | --- |
+| `users_email_key` | One account per email, where an email exists |
+| `users_phone_key` | One account per phone number |
+| `zones_name_key` | Zone names are unique |
+| `vehicles_plateNumber_key` | One vehicle per plate |
+| `pool_memberships_rideRequestId_key` | **A ride joins at most one pool** |
+| `pool_memberships_poolId_userId_key` | **A user joins a given pool at most once** |
+| `payments_rideRequestId_key` | **A ride is settled at most once** |
 
-**Driver FK to a role-checked subset.** Postgres has no native "FK to rows where role = X" constraint. The trick used here: add `UNIQUE (id, role)` on `users`, then `vehicles.driver_id` / `ride_requests.passenger_id` carry a redundant `_role` column with a `DEFAULT` and FK to `(id, role)` as a composite key. This enforces "a vehicle's driver_id must point to a user whose role is DRIVER" at the DB level instead of only in application code. Document this as a deliberate trade-off — it's a bit unusual and worth being ready to explain.
+The three bold rows are the database backstop for the matching engine. They
+are what make double-joining a physical impossibility rather than a
+convention — a violation surfaces as a unique-constraint error, mapped to
+HTTP 409 in `src/middleware/errorHandler.ts`.
 
-**Concurrency (Section 14's seat race).** `pools.available_seats` is only ever changed via an atomic conditional update inside the same transaction that inserts the `pool_memberships` row:
+Foreign keys use three different delete behaviours deliberately:
 
-```sql
-UPDATE pools
-SET available_seats = available_seats - :seats_requested,
-    version = version + 1
-WHERE id = :pool_id
-  AND available_seats >= :seats_requested
-RETURNING available_seats;
+- `CASCADE` on `vehicles.ownerId` and the three children of `pools` and
+  `ride_requests` — deleting a user or a pool should not leave orphans.
+- `RESTRICT` on the participant references (`pools.driverId`,
+  `ride_requests.passengerId`, `payments.userId`) — refusing to delete a user
+  with financial or operational history is safer than cascading it.
+- `SET NULL` on `ride_requests.poolId` — a cancelled ride survives the pool it
+  was matched to, with the link cleared.
+
+## 4. Design notes
+
+### Money is `Decimal(10,2)`, not integer poysha
+
+Every monetary column is `DECIMAL(10,2)`. An earlier draft of this document
+specified integer poysha with a `GENERATED ALWAYS AS (...) STORED` fare
+column. No generated columns exist in the schema. Poysha appears only as a
+transient intermediate inside
+[`src/utils/estimateFare.ts`](../backend/src/utils/estimateFare.ts) and never
+reaches a column.
+
+`Decimal` rather than `FLOAT`, so fares sum exactly. `NUMERIC(10,2)` rather
+than `NUMERIC(12,0)`, because the column is the unit of account.
+
+### Seat capacity is enforced by a conditional `UPDATE`
+
+There is no `version` column and no `SELECT ... FOR UPDATE`. The last seat is
+claimed by making the capacity check part of the write itself
+(`src/services/pool.service.ts`):
+
+```ts
+const result = await tx.pool.updateMany({
+  where: {
+    id: poolId,
+    status: PoolStatus.OPEN,
+    availableSeats: { gte: rideRequest.seatsRequested },
+  },
+  data: { availableSeats: { decrement: rideRequest.seatsRequested } },
+});
+if (result.count === 0) throw new AppError("Not enough seats left in this pool", 409);
 ```
 
-If this returns zero rows, the claim failed (someone else took the seat first) and the app returns a "seat no longer available" error rather than overbooking. The `version` column is kept as a secondary optimistic-lock signal / audit trail even though the `WHERE available_seats >= :n` guard is what actually prevents the race — worth explaining both in the interview. At scale, this is the point where you'd move to row-level locking (`SELECT ... FOR UPDATE`) or a queue-based matcher; document that as a "what I'd change" item.
+Under PostgreSQL's default `READ COMMITTED` isolation, a writer that blocks
+on a row lock re-evaluates its `WHERE` clause against the version the winner
+committed. The loser's `availableSeats >= seatsRequested` no longer matches,
+`count` is 0, and the transaction rolls back. The check and the write are the
+same statement, so they cannot disagree.
 
-**History, not just current state.** `ride_status_history` is append-only and logs every transition with who triggered it and when, satisfying the PRD's "hold onto enough history to explain exactly what happened." `pools`/`ride_requests.status` stay as the fast "current state" columns; the history table is the audit trail — don't try to reconstruct history by diffing status columns.
+`tests/integration/concurrentSeatClaim.test.ts` proves this: it takes a real
+row lock from a separate connection, asserts the service call stays blocked,
+then asserts it returns 409 after the lock is released.
 
-**Zones as a lookup table, not free text.** `zones` holds the predefined Dhaka-area list (Banani, Gulshan 1, Mohakhali, etc.) with lat/lng, so the matching rule (documented separately, e.g. "same pickup zone + destination zones within one hop") and `distance_charge_poysha` (e.g. haversine between zone centroids) both have something concrete to compute from — not hardcoded strings scattered across the app.
+The same pattern guards driver lifecycle transitions, seat release on
+cancellation, and the wallet debit. Lock order is consistent — pool row first,
+then ride request row — so those transactions cannot deadlock against each
+other.
 
-**`pool_id` nullable on `ride_requests`.** A request starts `REQUESTED` with `pool_id = NULL`; matching either attaches it to an existing open pool or creates a new one. `pool_memberships` is technically redundant with `ride_requests.pool_id` once matched, but it's kept as the single place that enforces "one ride request can only ever join one pool" via its `UNIQUE (ride_request_id)` constraint — cheap insurance against a bug double-inserting a membership row.
+### Distance without coordinates
 
-**Payments kept minimal.** One row per ride request (`UNIQUE (ride_request_id)`), `CASH` or `WALLET`, no real gateway — matches Section 5's "simulated TeslaPay wallet, no real gateway needed."
+`zones` has no `lat`/`lng`. A zone is a named area, and distance comes from
+[`src/config/fareConfig.ts`](../backend/src/config/fareConfig.ts), a
+hand-written table of zone-pair distances in km, defaulting to 5. Whether two
+zones can share a pool is decided by a static cluster map in
+[`src/config/zoneClusters.ts`](../backend/src/config/zoneClusters.ts).
+
+This is a deliberate simplification, and it is the weakest part of the data
+model. It works because Dhaka's zones are well known and the set is small and
+fixed; it would not survive a city where zones are arbitrary, and it cannot
+compute a fare for a pair the table does not list.
+
+### `userId` on `pool_memberships` is denormalized
+
+`pool_memberships` can reach `users` through `ride_requests.passengerId`. The
+denormalized copy is there so "which pools is this user in?" is a single
+indexed lookup instead of a join. The cost is that the application must keep
+the two in step; nothing in the database enforces that they agree.
+
+### `ride_status_history.changedById` has no foreign key
+
+Deliberate. History should outlive the account that produced it, and a
+restrict-delete on an audit column would make users undeletable. The cost is
+that the column can name a user who no longer exists.
+
+### `users.email` is nullable, `users.phone` is not
+
+Phone is the required identifier, because this is a ride-hailing product in
+Bangladesh and phone is how a driver and a passenger reach each other. Email
+is optional.
+
+## See also
+
+- [`architecture.md`](./architecture.md) — system-level design, layering, and
+  why there is no Redis, queue or microservice layer
+- [`testing.md`](./testing.md) — how the concurrency guarantees above are tested
