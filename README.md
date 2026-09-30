@@ -70,6 +70,15 @@ npm run test:db:down  # tears it down and drops its volume
 the same database, so pointing the tests at your dev data is not something you
 can do by accident.
 
+## Documentation
+
+| Document | What is in it |
+| --- | --- |
+| [`docs/architecture.md`](docs/architecture.md) | System diagram, the Route → Middleware → Controller → Service → Prisma layering, why there is no Redis/queue/microservice layer, concurrency model, scaling limits, known limitations |
+| [`docs/database-design.md`](docs/database-design.md) | **ERD and full schema** — the 8 tables, constraints, and why each major design choice was made |
+| [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
+| [`docs/demo.md`](docs/demo.md) | Walkthrough, demo credentials, and the video outline |
+
 ## Key Decisions & Trade-offs
 
 ### Money Representation
