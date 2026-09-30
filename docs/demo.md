@@ -51,26 +51,26 @@ Each passenger is charged for **their own** origin → destination, not the
 pool's, so Rafiq pays more even though they share one Tesla. The 30% tier
 applies once all three seats are occupied.
 
-## Screenshots to capture
+## Screenshots
 
-Drop these in `docs/screenshots/`. Two widths per shot is ideal — the PRD asks
-for responsive behaviour, and a desktop-only screenshot does not show it.
+Captured and committed in `docs/screenshots/`, at both widths, embedded in the
+[README](../README.md#screenshots). The table below is the manifest.
 
 | File                          | View                        | Widths        |
 | ----------------------------- | --------------------------- | ------------- |
 | `01-sign-in.png`              | Sign-in screen with demo buttons | 1280, 390 |
 | `02-passenger-new-ride.png`  | Nusrat's booking form, zones loaded | 1280, 390 |
-| `03-fare-preview.png`        | Fare estimate showing all three tiers | 1280 |
+| `03-fare-preview.png`        | Fare estimate showing all three tiers | 1280, 390 |
 | `04-driver-offline.png`      | Jashim offline, no requests visible | 1280, 390 |
 | `05-driver-online-requests.png` | Jashim online with open requests | 1280, 390 |
 | `06-accept-modal.png`        | The accept dialog           | 1280, 390    |
 | `07-active-pool.png`         | Active trip: seat summary, passengers, timeline | 1280, 390 |
-| `08-passenger-tracking.png`  | Nusrat's status timeline while underway | 1280 |
+| `08-passenger-tracking.png`  | Nusrat's status timeline while underway | 1280, 390 |
 | `09-wallet-topup.png`        | TeslaPay wallet with top-up form open | 1280, 390 |
-| `10-trip-complete.png`       | Completed trip with per-passenger fares | 1280 |
+| `10-trip-complete.png`       | Completed trip with per-passenger fares | 1280, 390 |
 | `11-history.png`             | Driver trip history, timeline expanded | 1280, 390 |
 
-### Error and empty states worth capturing
+### Error and empty states — not captured
 
 These are the states that usually go undocumented, and they are the ones the
 PRD's "clear loading/error/empty states" requirement is really about:
@@ -83,7 +83,16 @@ PRD's "clear loading/error/empty states" requirement is really about:
 | `15-no-open-requests.png`         | Jashim online with nobody waiting |
 | `16-no-tesla-registered.png`      | Register a driver with no vehicle, then go online |
 
+The first two need the backend stopped, which is not possible against a hosted
+service, and the three easy ones were not worth padding the README with. The
+states are all handled in the application — the README documents this under
+Known limitations rather than implying the screenshots are exhaustive.
+
 ## Video outline (6 minutes)
+
+Walk the 13 steps above, driving the live deployment at
+**https://dhaka-tesla-pool-web-9ejc.onrender.com** so the URL is visible on
+screen. Wait out the 30–50s cold start before recording.
 
 The PRD's timing, with this project's content mapped onto it.
 
