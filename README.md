@@ -1,3 +1,75 @@
+## Running the project
+
+Everything runs from Docker. A clean clone needs Docker Desktop and nothing
+else — no local Node, no local Postgres.
+
+```bash
+git clone https://github.com/poorcoder04/Dhaka-Tesla-Pool.git
+cd Dhaka-Tesla-Pool
+docker compose up -d --build
+```
+
+Then open http://localhost:3000. The API is on http://localhost:5000.
+
+First start builds both images and waits for Postgres, so give it a few
+minutes. Startup is ordered automatically: migrations and seeding run once
+and exit, the backend waits for Postgres to report healthy, and the frontend
+waits for the backend's `/health` check. Check on it with `docker compose ps`
+— every service except `prisma_runner` should read `healthy`.
+
+`prisma_runner` showing `Exited (0)` is success. It is a one-shot migration
+job, not a service that stays up.
+
+### Configuration
+
+Defaults work for local use, so no `.env` is required. To override anything,
+copy the template and edit it:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | `safe_password_here` | **Change this before deploying.** |
+| `JWT_SECRET` | a dev-only fallback | **Change this before deploying.** Anyone who knows this value can forge a token for any account, including a driver's. |
+| `FRONTEND_ORIGIN` | `http://localhost:3000` | The API's CORS allowlist. Must be the real frontend URL once deployed, or browser requests get rejected. |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | See the rebuild note below — this one is not read at runtime. |
+
+### `NEXT_PUBLIC_API_URL` requires an image rebuild
+
+Next.js substitutes `NEXT_PUBLIC_*` variables into the client bundle during
+`next build`. The value is frozen into the JavaScript your browser downloads,
+so setting it on a running container has no effect — the container picks up
+the new value and the browser never sees it.
+
+To change it:
+
+```bash
+docker compose build frontend
+docker compose up -d frontend
+```
+
+A restart alone will not do it. This is the trade-off for keeping the API URL
+a build argument instead of a runtime config endpoint: one fewer moving part,
+at the cost of a rebuild.
+
+### Tests
+
+Integration tests run against a separate database and truncate every table
+between cases, so they are deliberately kept away from the dev one.
+
+```bash
+cd backend
+npm run test:db:up    # separate Postgres, own port
+npm test              # 46 tests
+npm run test:db:down  # tears it down and drops its volume
+```
+
+`globalSetup` refuses to start if `TEST_DATABASE_URL` and `DATABASE_URL` name
+the same database, so pointing the tests at your dev data is not something you
+can do by accident.
+
 ## Key Decisions & Trade-offs
 
 ### Money Representation
