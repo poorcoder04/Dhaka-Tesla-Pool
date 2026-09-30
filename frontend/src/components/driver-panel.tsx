@@ -13,6 +13,7 @@ import {
   getPaymentForRide,
   getPoolHistory,
   getPoolTimeline,
+  getCurrentUser,
   setDriverStatus,
   startTrip,
   errorText,
@@ -345,6 +346,11 @@ function OpenRequestsList({ token, vehicles, hasActivePool, onAccepted }: OpenRe
   function handleAccepted(pool: ActivePool) {
     setPendingRide(null);
     onAccepted(pool);
+    // The accepted request is no longer REQUESTED, so leaving it on screen
+    // invites the driver to accept it again and get a 409. Reload rather than
+    // filtering locally: one extra request is cheaper than guessing which
+    // entries the server considers open.
+    void loadRides();
   }
 
   if (isLoading) {
@@ -1039,11 +1045,19 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
         if (err instanceof ApiError && err.status === 404) return null;
         throw err;
       }),
+      // The stored online status, not a local guess. It used to be
+      // initialised to false and only ever set true once a pool existed, so a
+      // driver who was genuinely online but had no active trip was shown as
+      // offline and told to go online — a state they were already in.
+      getCurrentUser(token).catch(() => null),
     ])
-      .then(([vehicleList, pool]) => {
+      .then(([vehicleList, pool, user]) => {
         if (!isCurrent) return;
         setVehicles(vehicleList);
         setActivePool(pool);
+        if (user) setIsOnline(user.isOnline);
+        // An active trip means the driver is on the road whether or not the
+        // status column agrees.
         if (pool) setIsOnline(true);
       })
       .catch((err: unknown) => {
@@ -1125,14 +1139,43 @@ export default function DriverPanel({ token, driverName }: DriverPanelProps) {
           <OnlineToggle token={token} isOnline={isOnline} onChange={setIsOnline} />
 
           {activePool ? (
-            <ActivePoolView
-              token={token}
-              pool={activePool}
-              onPoolUpdated={(updated) => {
-                setActivePool(updated);
-                if (!updated) setIsOnline(false);
-              }}
-            />
+            <>
+              <ActivePoolView
+                token={token}
+                pool={activePool}
+                onPoolUpdated={(updated) => {
+                  setActivePool(updated);
+                  if (!updated) setIsOnline(false);
+                }}
+              />
+              {/* A driver with a live trip must still be able to add another
+                  passenger to it — that is the entire point of pooling. The
+                  backend has always supported this (it joins the existing
+                  pool when the pickup zone and destination cluster match), but
+                  the requests list used to be unmounted the moment a pool
+                  existed, so the one feature the product is named after was
+                  unreachable from the UI.
+
+                  Only while the pool is OPEN. Once the driver has arrived or
+                  started, the server rejects every new passenger with "your
+                  current trip is already underway", so offering the button
+                  there would be an Accept that can only fail. A pool stays
+                  OPEN from creation until arrival, so this is exactly the
+                  window in which passengers can still join.
+
+                  Requests that do not fit the current trip stay listed: the
+                  destination cluster is server-side knowledge, and the server
+                  explains the mismatch on accept far better than a client-side
+                  guess would. */}
+              {activePool.status === "OPEN" && (
+                <OpenRequestsList
+                  token={token}
+                  vehicles={vehicles}
+                  hasActivePool
+                  onAccepted={(pool) => setActivePool(pool)}
+                />
+              )}
+            </>
           ) : isOnline ? (
             <>
               {/* Online with no Tesla: the requests list would still load and

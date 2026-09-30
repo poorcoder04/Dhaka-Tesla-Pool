@@ -6,6 +6,12 @@ export interface SessionUser {
   phone: string;
   email: string | null;
   role: UserRole;
+  /**
+   * Returned by /api/auth/me. Always present — it is a column on every user,
+   * not a driver-only concept — but only meaningful for DRIVER, where it is
+   * what decides whether ride requests are served.
+   */
+  isOnline: boolean;
 }
 
 export interface AuthResult {
