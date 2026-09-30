@@ -418,10 +418,11 @@ well-known zones; it would not extend to arbitrary geography.
 
 ## Testing
 
-46 tests in two projects, because they are not the same kind of claim:
+52 tests in two projects, because they are not the same kind of claim:
 
-- **`unit`** — fare arithmetic and the state-transition tables. Pure logic, no
-  database.
+- **`unit`** — fare arithmetic, the state-transition tables, and the auth rate
+  limiter. No database. The rate limiter is driven through a real Express app
+  over a real socket, so it is tested as it actually runs.
 - **`integration`** — seat capacity, the concurrent last-seat race, cross-user
   access control, cancellation rules. These are database invariants, so mocking
   Prisma would prove nothing. They run against a throwaway database on its own
@@ -461,7 +462,7 @@ Stated plainly. Two of these are real defects, not just scope.
   stateless, but `PrismaPg` uses `pg`'s default pool of 10 connections per
   process against Postgres's default `max_connections = 100`, so ~9 instances
   would exhaust the server. The fix is PgBouncer, not Redis.
-- **The frontend has no automated tests.** The backend has 46.
+- **The frontend has no automated tests.** The backend has 52.
 
 ## Documentation
 
@@ -471,4 +472,5 @@ Stated plainly. Two of these are real defects, not just scope.
 | [`docs/database-design.md`](docs/database-design.md) | ERD, full schema, constraints, design notes |
 | [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
 | [`docs/demo.md`](docs/demo.md) | Demo credentials, walkthrough, fares, video outline |
+| [`docs/deployment.md`](docs/deployment.md) | Deploying to Render + Neon, step by step, and the gotchas |
 | [`docs/build-log.md`](docs/build-log.md) | Step-by-step record of how it was built |

@@ -15,6 +15,16 @@ import { zoneRouter } from "./routes/zone.route.js";
 //  Express App
 const app = express();
 
+// Trust exactly one proxy hop. In production this sits behind the platform's
+// load balancer, which sets X-Forwarded-For; without this, `req.ip` is the
+// load balancer's address for every request, so every visitor on the internet
+// shares a single rate-limit bucket and one abuser locks out all of them.
+//
+// `1` rather than `true`: `true` would also trust X-Forwarded-For from a
+// client that can set the header itself, letting anyone bypass the limit by
+// forging it. One hop is what a single load balancer actually produces.
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: env.FRONTEND_ORIGIN,
