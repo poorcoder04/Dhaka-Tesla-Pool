@@ -19,21 +19,25 @@ services:
       retries: 10
 
   # 2. Run Prisma migrations + seed (one-shot, exits when done)
+  #
+  # Built from the backend's own `migrate` stage rather than a bare
+  # node:22-alpine with the source bind-mounted. The old version ran
+  # `npm install` on every `up`, which meant a slow cold start and a
+  # migration that could fail on a network hiccup rather than on anything
+  # to do with the migration.
   prisma_runner:
-    image: node:22-alpine
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrate
     container_name: dhaka_tesla_prisma
-    working_dir: /app
-    volumes:
-      - ./backend:/app
     environment:
       DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-safe_password_here}@postgres:5432/tesla_pool_db?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
     command: >
-      sh -c "npm install &&
-             npx prisma migrate deploy &&
-             npx prisma db seed"
+      sh -c "npx prisma migrate deploy && npx prisma db seed"
 
   # 3. Node.js + Express Backend (TypeScript via tsx)
   backend:
