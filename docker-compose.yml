@@ -73,15 +73,26 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Build argument, not `environment:`. Next.js substitutes NEXT_PUBLIC_*
+        # into the client bundle during `next build`, so a value set on a
+        # running container is ignored - the browser downloads JavaScript that
+        # was frozen at build time. Changing this requires:
+        #   docker compose build frontend && docker compose up -d frontend
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
     container_name: dhaka_tesla_frontend
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:5000"
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
 volumes:
   pgdata:
