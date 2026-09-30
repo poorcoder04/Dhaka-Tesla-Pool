@@ -344,3 +344,46 @@ npm run test:db:up    # start the throwaway database on :5434
 npm test              # unit + integration
 ```
 
+### Slice 7 — frontend polish
+
+Loading, empty and error states are consistent across all three panels, and
+every state the app can be in has been walked through with the seeded cast.
+
+Fixes this slice made, rather than only adding states:
+
+- **`Failed to fetch` is no longer shown to users.** `fetch` was awaited with
+  no timeout and no network handling, so a backend that was simply not running
+  surfaced a raw browser string — and a request that connected and then went
+  silent left the panel spinning forever. `ApiError` now distinguishes "the
+  server said no" from "we never reached the server", and every request has a
+  12-second timeout.
+- **A completed trip used to show no fare at all.** `PassengerPaymentCard`
+  initialised `isLoading` to `false` and never set it back to `true`, so its
+  loading branch was unreachable and the fare row rendered blank while the
+  request was still in flight.
+- **Trip history showed the wrong trip's error.** One unkeyed error string was
+  shared across all expanded trips, so a failure on trip A appeared under trip
+  B.
+- **The wallet no longer vanishes.** A failed wallet load rendered `null`,
+  leaving TeslaPay offered with no explanation and no retry. It now shows what
+  failed, offers a retry, and disables TeslaPay so the form is never left on a
+  payment method known not to work.
+- **Keyboard support for the accept dialog**: Escape closes, focus moves in,
+  Tab is trapped, and focus returns to the card that opened it.
+- **Drivers going online with no Tesla** are told up front, instead of
+  discovering it through an Accept button that can only fail.
+
+### Demo
+
+**[docs/demo.md](docs/demo.md)** — demo credentials, a 13-step walkthrough of
+the story, the exact fares each passenger is charged, the screenshot list, and
+the 6-minute video outline.
+
+| Person | Phone         | Password           | Role            |
+| ------ | ------------- | ------------------ | --------------- |
+| Jashim | `01700000001` | `DhakaPoolDemo123!` | Driver (Bullet) |
+| Nusrat | `01700000002` | `DhakaPoolDemo123!` | Passenger       |
+| Rafiq  | `01700000003` | `DhakaPoolDemo123!` | Passenger       |
+| Shirin | `01700000004` | `DhakaPoolDemo123!` | Passenger       |
+
+
