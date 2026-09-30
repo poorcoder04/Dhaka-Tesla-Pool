@@ -672,6 +672,7 @@ was a question.
 | [`docs/database-design.md`](docs/database-design.md) | ERD, full schema, constraints, design notes |
 | [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
 | [`docs/demo.md`](docs/demo.md) | Demo credentials, walkthrough, fares, video outline |
+| [`docs/video-script.md`](docs/video-script.md) | The 6-minute video script, word for word |
 | [`docs/deployment.md`](docs/deployment.md) | Deploying to Render + Neon, step by step, and the gotchas |
 | [`docs/working-flow-and-commands.md`](docs/working-flow-and-commands.md) | Everyday commands, the dev loop, and the env vars |
 | [`docs/build-log.md`](docs/build-log.md) | Step-by-step record of how it was built |
