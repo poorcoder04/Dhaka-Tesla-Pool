@@ -6,7 +6,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: safe_password_here
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-safe_password_here}
       POSTGRES_DB: tesla_pool_db
     ports:
       - "5433:5432"          # host:5433 → container:5432
@@ -26,7 +26,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-safe_password_here}@postgres:5432/tesla_pool_db?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,9 +46,13 @@ services:
       - "5000:5000"
     environment:
       PORT: 5000
-      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
-      JWT_SECRET: "docker_jwt_secret_change_in_prod"
-      FRONTEND_ORIGIN: "http://localhost:3000"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-safe_password_here}@postgres:5432/tesla_pool_db?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-docker_jwt_secret_change_in_prod}
+      # Where the frontend is served from. Must be the browser-visible origin,
+      # not the container name - CORS compares it against the request's Origin
+      # header. Override for any real deployment, or the browser will be
+      # blocked from calling the API.
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
