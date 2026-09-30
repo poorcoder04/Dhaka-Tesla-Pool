@@ -39,6 +39,7 @@ Full deployment steps, including the environment variables and the
 | [Demo accounts](#demo-accounts) | Log in as a driver or passenger |
 | [Running the project](#running-the-project) | Docker, or local development |
 | [Configuration](#configuration) | Every environment variable, explained |
+| [Working flow](docs/working-flow-and-commands.md) | Everyday commands and the dev loop |
 | [Repository structure](#repository-structure) | Where things live |
 | [Architecture](#architecture) | System diagram and layering |
 | [API overview](#api-overview) | All 30 endpoints |
@@ -672,4 +673,5 @@ was a question.
 | [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
 | [`docs/demo.md`](docs/demo.md) | Demo credentials, walkthrough, fares, video outline |
 | [`docs/deployment.md`](docs/deployment.md) | Deploying to Render + Neon, step by step, and the gotchas |
+| [`docs/working-flow-and-commands.md`](docs/working-flow-and-commands.md) | Everyday commands, the dev loop, and the env vars |
 | [`docs/build-log.md`](docs/build-log.md) | Step-by-step record of how it was built |
