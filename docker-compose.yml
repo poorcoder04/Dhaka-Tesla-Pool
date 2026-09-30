@@ -6,7 +6,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: safe_password_here
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-safe_password_here}
       POSTGRES_DB: tesla_pool_db
     ports:
       - "5433:5432"          # host:5433 → container:5432
@@ -19,21 +19,25 @@ services:
       retries: 10
 
   # 2. Run Prisma migrations + seed (one-shot, exits when done)
+  #
+  # Built from the backend's own `migrate` stage rather than a bare
+  # node:22-alpine with the source bind-mounted. The old version ran
+  # `npm install` on every `up`, which meant a slow cold start and a
+  # migration that could fail on a network hiccup rather than on anything
+  # to do with the migration.
   prisma_runner:
-    image: node:22-alpine
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrate
     container_name: dhaka_tesla_prisma
-    working_dir: /app
-    volumes:
-      - ./backend:/app
     environment:
-      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-safe_password_here}@postgres:5432/tesla_pool_db?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
     command: >
-      sh -c "npm install &&
-             npx prisma migrate deploy &&
-             npx prisma db seed"
+      sh -c "npx prisma migrate deploy && npx prisma db seed"
 
   # 3. Node.js + Express Backend (TypeScript via tsx)
   backend:
@@ -46,9 +50,13 @@ services:
       - "5000:5000"
     environment:
       PORT: 5000
-      DATABASE_URL: "postgresql://postgres:safe_password_here@postgres:5432/tesla_pool_db?schema=public"
-      JWT_SECRET: "docker_jwt_secret_change_in_prod"
-      FRONTEND_ORIGIN: "http://localhost:3000"
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:-safe_password_here}@postgres:5432/tesla_pool_db?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-docker_jwt_secret_change_in_prod}
+      # Where the frontend is served from. Must be the browser-visible origin,
+      # not the container name - CORS compares it against the request's Origin
+      # header. Override for any real deployment, or the browser will be
+      # blocked from calling the API.
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,15 +73,26 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Build argument, not `environment:`. Next.js substitutes NEXT_PUBLIC_*
+        # into the client bundle during `next build`, so a value set on a
+        # running container is ignored - the browser downloads JavaScript that
+        # was frozen at build time. Changing this requires:
+        #   docker compose build frontend && docker compose up -d frontend
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
     container_name: dhaka_tesla_frontend
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:5000"
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
 volumes:
   pgdata:

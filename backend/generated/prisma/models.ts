@@ -8,12 +8,12 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/User.js'
-export type * from './models/Zone.js'
-export type * from './models/Vehicle.js'
-export type * from './models/Pool.js'
-export type * from './models/RideRequest.js'
-export type * from './models/PoolMembership.js'
-export type * from './models/RideStatusHistory.js'
-export type * from './models/Payment.js'
-export type * from './commonInputTypes.js'
+export type * from './models/User.ts'
+export type * from './models/Zone.ts'
+export type * from './models/Vehicle.ts'
+export type * from './models/Pool.ts'
+export type * from './models/RideRequest.ts'
+export type * from './models/PoolMembership.ts'
+export type * from './models/RideStatusHistory.ts'
+export type * from './models/Payment.ts'
+export type * from './commonInputTypes.ts'
