@@ -1,7 +1,49 @@
+# Dhaka Tesla Pool
+
+A ride-pooling platform for Dhaka: passengers request a trip between zones, and
+drivers running a Tesla ("Bullet") fill their remaining seats with passengers
+heading a compatible way. Fares drop as the pool fills — 30 BDT base plus
+15 BDT/km, minus a pooled-seat discount of up to 30%.
+
+> **Status:** working end to end. `docker compose up` from a clean clone gives
+> you a seeded database, a REST API, and a passenger/driver web app.
+> See [Known limitations](#known-limitations) for what it deliberately does not do.
+
+## Contents
+
+| Section | |
+| --- | --- |
+| [Demo accounts](#demo-accounts) | Log in as a driver or passenger |
+| [Running the project](#running-the-project) | Docker, or local development |
+| [Configuration](#configuration) | Every environment variable, explained |
+| [Repository structure](#repository-structure) | Where things live |
+| [Architecture](#architecture) | System diagram and layering |
+| [API overview](#api-overview) | All 30 endpoints |
+| [Key decisions and trade-offs](#key-decisions-and-trade-offs) | Why it is built this way |
+| [Testing](#testing) | How to run the suites |
+| [Known limitations](#known-limitations) | What this does not do |
+| [Documentation](#documentation) | Longer documents |
+
+## Demo accounts
+
+Seeded by `prisma_runner` on first start. All four share one password.
+
+| Person | Phone | Password | Role | Vehicle |
+| --- | --- | --- | --- | --- |
+| Jashim | `01700000001` | `DhakaPoolDemo123!` | Driver | Bullet (3 seats) |
+| Nusrat | `01700000002` | `DhakaPoolDemo123!` | Passenger | — |
+| Rafiq | `01700000003` | `DhakaPoolDemo123!` | Passenger | — |
+| Shirin | `01700000004` | `DhakaPoolDemo123!` | Passenger | — |
+
+The three-minute story, the exact fare each passenger pays, and a 13-step
+walkthrough are in [`docs/demo.md`](docs/demo.md).
+
 ## Running the project
 
-Everything runs from Docker. A clean clone needs Docker Desktop and nothing
-else — no local Node, no local Postgres.
+### With Docker (recommended)
+
+A clean clone needs Docker Desktop and nothing else — no local Node, no local
+Postgres.
 
 ```bash
 git clone https://github.com/poorcoder04/Dhaka-Tesla-Pool.git
@@ -9,21 +51,68 @@ cd Dhaka-Tesla-Pool
 docker compose up -d --build
 ```
 
-Then open http://localhost:3000. The API is on http://localhost:5000.
+- App: **http://localhost:3000**
+- API: **http://localhost:5000**
 
-First start builds both images and waits for Postgres, so give it a few
-minutes. Startup is ordered automatically: migrations and seeding run once
-and exit, the backend waits for Postgres to report healthy, and the frontend
-waits for the backend's `/health` check. Check on it with `docker compose ps`
-— every service except `prisma_runner` should read `healthy`.
+The first start builds both images, so give it a few minutes. Startup is
+ordered automatically: `prisma_runner` applies migrations and seeds, the
+backend waits for Postgres to report healthy, and the frontend waits for the
+backend's `/health` check.
 
-`prisma_runner` showing `Exited (0)` is success. It is a one-shot migration
-job, not a service that stays up.
+Check on it with `docker compose ps`. Every service should read `healthy`
+**except** `prisma_runner`, which reads `Exited (0)` — that is success. It is
+a one-shot migration job, not a service that stays up.
 
-### Configuration
+To wipe the database and start over:
 
-Defaults work for local use, so no `.env` is required. To override anything,
-copy the template and edit it:
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+### Locally, without Docker
+
+Use this if you want fast refresh and are running the Postgres yourself.
+You need Node 22 and a PostgreSQL instance.
+
+```bash
+# 1. Backend
+cd backend
+npm install
+cp .env.example .env          # then fix DATABASE_URL to point at your Postgres
+npm run prisma:generate
+npm run prisma:migrate       # creates and applies migrations
+npm run prisma:seed          # seeds zones and the demo accounts
+npm run dev                  # http://localhost:5000
+
+# 2. Frontend, in a second terminal
+cd frontend
+npm install
+npm run dev                  # http://localhost:3000
+```
+
+`npm run dev` uses `tsx watch`, so the backend restarts on save. It serves the
+API only; the frontend is a separate process that talks to it over HTTP.
+
+Useful backend scripts:
+
+| Script | Does |
+| --- | --- |
+| `npm run dev` | Watch mode API server |
+| `npm run build` / `npm start` | Compile to `dist/`, run the compiled server |
+| `npm run prisma:migrate` | Create and apply a migration (dev) |
+| `npm run prisma:migrate:prod` | Apply existing migrations (`migrate deploy`) |
+| `npm run prisma:seed` | Seed zones and demo accounts |
+| `npm run prisma:studio` | Browse the database in a GUI |
+| `npm run db:reset` | Drop, re-migrate, re-seed |
+| `npm run test:db:up` / `:down` | Start/stop the throwaway test database |
+
+## Configuration
+
+Defaults work for local use, so no `.env` is needed to run the Docker stack.
+
+### Root `.env.example`
+
+Read by `docker compose`. Copy it to `.env` to override anything:
 
 ```bash
 cp .env.example .env
@@ -31,19 +120,32 @@ cp .env.example .env
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `POSTGRES_PASSWORD` | `safe_password_here` | **Change this before deploying.** |
-| `JWT_SECRET` | a dev-only fallback | **Change this before deploying.** Anyone who knows this value can forge a token for any account, including a driver's. |
-| `FRONTEND_ORIGIN` | `http://localhost:3000` | The API's CORS allowlist. Must be the real frontend URL once deployed, or browser requests get rejected. |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | See the rebuild note below — this one is not read at runtime. |
+| `POSTGRES_PASSWORD` | `safe_password_here` | Password for the Postgres container. **Change before deploying.** |
+| `JWT_SECRET` | `docker_jwt_secret_change_in_prod` | Signing key for auth tokens. **Change before deploying.** Anyone who knows this value can forge a token for any account, including a driver's. |
+| `FRONTEND_ORIGIN` | `http://localhost:3000` | The API's CORS allowlist. Must match the real frontend origin exactly, including scheme and port, or the API rejects browser requests. |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | Backend URL as seen by the browser. **Read at build time** — see below. |
+
+### Backend `.env.example`
+
+Read by the API when running locally (`npm run dev`).
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `NODE_ENV` | `development` | `production` switches Prisma logging and error verbosity |
+| `DATABASE_URL` | `postgresql://postgres:YOUR_DB_PASSWORD@localhost:5433/tesla_pool_db?schema=public` | Connection string. Only the password needs editing. |
+| `JWT_SECRET` | `replace_with_a_long_random_secret_at_least_16_chars` | Must be at least 16 characters |
+| `JWT_EXPIRES_IN` | `7d` | Token lifetime |
+| `PORT` | `5000` | API port |
+| `FRONTEND_ORIGIN` | `http://localhost:3000` | CORS allowlist, as above |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:5000` | Unused by the backend; present for symmetry |
+| `TEST_DATABASE_URL` | `postgresql://postgres:...@localhost:5434/tesla_pool_test_db` | **Integration tests only.** The suite truncates every table between cases, so it must never point at `DATABASE_URL`. `globalSetup` refuses to run if the two name the same database. |
 
 ### `NEXT_PUBLIC_API_URL` requires an image rebuild
 
 Next.js substitutes `NEXT_PUBLIC_*` variables into the client bundle during
-`next build`. The value is frozen into the JavaScript your browser downloads,
+`next build`. The value is frozen into the JavaScript the browser downloads,
 so setting it on a running container has no effect — the container picks up
 the new value and the browser never sees it.
-
-To change it:
 
 ```bash
 docker compose build frontend
@@ -51,420 +153,322 @@ docker compose up -d frontend
 ```
 
 A restart alone will not do it. This is the trade-off for keeping the API URL
-a build argument instead of a runtime config endpoint: one fewer moving part,
+a build argument rather than a runtime config endpoint: one fewer moving part,
 at the cost of a rebuild.
 
-### Tests
+## Repository structure
 
-Integration tests run against a separate database and truncate every table
-between cases, so they are deliberately kept away from the dev one.
+```
+.
+├── backend/                  Node 22 · Express · Prisma
+│   ├── prisma/
+│   │   ├── schema.prisma     8 models — source of truth for the database
+│   │   ├── migrations/       Generated SQL migrations
+│   │   └── seed.ts           Zones + demo accounts
+│   ├── src/
+│   │   ├── routes/           Method + path only, no logic
+│   │   ├── middleware/       auth, role checks, Zod validation, errors
+│   │   ├── controllers/      HTTP in, HTTP out
+│   │   ├── services/         Business rules and transactions
+│   │   ├── validators/       Zod schemas
+│   │   ├── config/           env, fares, zone clusters, transitions
+│   │   └── lib/prisma.ts     The only Prisma client construction
+│   └── tests/                unit + integration (Vitest)
+├── frontend/                 Next.js 16 · React
+│   └── src/app/              Passenger and driver views
+├── docs/                     Architecture, schema, testing, demo, build log
+├── docker-compose.yml        postgres, prisma_runner, backend, frontend
+├── docker-compose.test.yml   Throwaway database for integration tests
+└── .env.example              Docker configuration template
+```
+
+### Stack
+
+| Layer | Choice |
+| --- | --- |
+| Frontend | Next.js 16 (App Router), React, TypeScript |
+| Backend | Node 22, Express, TypeScript (ESM) |
+| Database | PostgreSQL 15, Prisma 7 with the `@prisma/adapter-pg` driver adapter |
+| Validation | Zod |
+| Auth | `bcryptjs` + `jsonwebtoken` (stateless JWT) |
+| Testing | Vitest — unit and integration projects |
+| Runtime | Docker, multi-stage production images |
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Browser
+        UI["Next.js client<br/>React components"]
+    end
+
+    subgraph Docker["docker compose"]
+        subgraph Frontend["frontend · Next.js 16"]
+            SSR["server.js<br/>standalone output"]
+        end
+
+        subgraph Backend["backend · Node 22 + Express"]
+            Routes["Routes<br/>path + method only"]
+            MW["Middleware<br/>auth · validate · logging"]
+            Ctrl["Controllers<br/>HTTP in, HTTP out"]
+            Svc["Services<br/>business rules + transactions"]
+            Prisma["Prisma client<br/>@prisma/adapter-pg"]
+        end
+
+        subgraph Data["postgres:15-alpine"]
+            DB[("8 tables<br/>row locks · unique indexes")]
+        end
+
+        Job["prisma_runner<br/>one-shot job"]
+    end
+
+    UI -->|"HTTP · fetch on demand"| SSR
+    SSR -->|"HTTP /api/*"| Routes
+    Routes --> MW --> Ctrl --> Svc --> Prisma --> DB
+    Job -->|"migrate deploy + seed"| DB
+
+    style Data fill:#eef
+    style Job fill:#ffe,stroke-dasharray: 4 3
+```
+
+Every request follows the same path:
+
+```
+Route → Middleware → Controller → Service → Prisma → PostgreSQL
+```
+
+Layers import downward only. Controllers hold no business rules, routes hold
+no logic at all, and **only services open transactions** — which is what keeps
+a write and the rule justifying it atomic by construction.
+
+Full detail, including why there is no Redis, no queue and no microservice
+layer, is in [`docs/architecture.md`](docs/architecture.md).
+
+**Data model:** [`docs/database-design.md`](docs/database-design.md) — [ERD
+and full schema](docs/database-design.md) for the 8 tables.
+
+## API overview
+
+All endpoints are under `/api`. "Auth" means a valid bearer token; the role
+column is enforced by `authorize()` middleware. Everything except `GET /api/zones`
+requires auth.
+
+### Auth
+
+| Method | Endpoint | Auth | Role | Purpose |
+| --- | --- | --- | --- | --- |
+| POST | `/api/auth/signup` | — | — | Register. Drivers must supply vehicle details |
+| POST | `/api/auth/login` | — | — | Log in, returns a JWT |
+| GET | `/api/auth/me` | ✅ | Any | Current profile |
+
+### Zones and vehicles
+
+| Method | Endpoint | Auth | Role | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/api/zones` | — | — | List all zones |
+| GET | `/api/zones/:id` | — | — | One zone |
+| GET | `/api/vehicles/me` | ✅ | DRIVER | Vehicles owned by the caller |
+| POST | `/api/vehicles` | ✅ | DRIVER | Register a vehicle |
+| PATCH | `/api/vehicles/:id` | ✅ | DRIVER | Update a vehicle |
+| GET | `/api/vehicles/:id` | ✅ | Any | One vehicle |
+
+### Ride requests
+
+| Method | Endpoint | Auth | Role | Purpose |
+| --- | --- | --- | --- | --- |
+| POST | `/api/rides` | ✅ | PASSENGER | Request a trip |
+| GET | `/api/rides/me` | ✅ | PASSENGER | Own ride history |
+| GET | `/api/rides/open` | ✅ | DRIVER | Requests available to accept |
+| POST | `/api/rides/:id/accept` | ✅ | DRIVER | Accept a request into a pool |
+| PATCH | `/api/rides/:id/cancel` | ✅ | PASSENGER | Cancel, releasing the seat |
+| GET | `/api/rides/:id` | ✅ | PASSENGER (owner) | One request |
+| GET | `/api/rides/:id/history` | ✅ | PASSENGER (owner) | Status timeline |
+
+### Pools and driver lifecycle
+
+| Method | Endpoint | Auth | Role | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/api/pools/me/active` | ✅ | DRIVER | Current trip and its passengers |
+| GET | `/api/pools/me/history` | ✅ | DRIVER | Completed and cancelled trips |
+| GET | `/api/pools/:id` | ✅ | DRIVER (owner) | One trip and all passengers |
+| GET | `/api/pools/:id/history` | ✅ | DRIVER (owner) | Status timeline |
+| POST | `/api/pools/:id/arrive` | ✅ | DRIVER | Mark arrived |
+| POST | `/api/pools/:id/start` | ✅ | DRIVER | Start the trip |
+| POST | `/api/pools/:id/complete` | ✅ | DRIVER | Complete, and settle fares |
+| POST | `/api/pools/:id/cancel` | ✅ | DRIVER | Cancel before the trip starts |
+| PATCH | `/api/drivers/me/status` | ✅ | DRIVER | Go online or offline |
+
+### Fares and payments
+
+| Method | Endpoint | Auth | Role | Purpose |
+| --- | --- | --- | --- | --- |
+| GET | `/api/wallet` | ✅ | Any | Wallet balance |
+| POST | `/api/wallet/topup` | ✅ | Any | Add funds |
+| POST | `/api/fares/estimate` | ✅ | Any | Solo vs pooled fare |
+| POST | `/api/payments/:paymentId/collect` | ✅ | DRIVER | Mark a cash payment collected |
+| GET | `/api/payments/ride/:rideRequestId` | ✅ | Passenger or driver | Payment for a ride |
+
+### Lifecycle
+
+```
+Pool:   OPEN → DRIVER_ARRIVED → STARTED → COMPLETED
+        (cancellable from OPEN or DRIVER_ARRIVED)
+
+Ride:   REQUESTED → MATCHED → DRIVER_ARRIVED → STARTED → COMPLETED
+        (passenger may cancel before STARTED; the seat returns to the pool)
+```
+
+A driver action updates the pool and every active passenger in one transaction.
+Only online drivers can accept requests, and a driver with an active trip
+cannot go offline.
+
+## Key decisions and trade-offs
+
+### Money is `Decimal(10,2)`, not integer poysha
+
+**Why:** readable in the database, directly represents values like `250.50`,
+and keeps the fare model simple. `NUMERIC` rather than `FLOAT` so fares sum
+exactly.
+
+**Alternative considered:** store money as integer poysha (`25050` = ৳250.50).
+
+**Trade-off:** fare arithmetic must handle decimal precision and rounding
+consistently. The implementation converts to integer poysha *inside*
+`estimateFare` and converts back, so rounding happens in one place.
+
+**When I would reconsider:** for a larger financial system with a real payment
+gateway, integer minor units would remove the concern entirely.
+
+### Password hashing with `bcryptjs` over native `bcrypt`
+
+Pure JavaScript, so there is no node-gyp build step and no native binary
+mismatch between the host machine and the Docker container. The cost is
+throughput, which is irrelevant at this scale — there is no realistic
+login-storm scenario for an MVP.
+
+### Zod for all input validation
+
+"I receive data from outside my code → I don't trust it → Zod checks it → if
+valid, I use it." Applied at the middleware layer, so no controller can be
+reached with an unvalidated body.
+
+```
+Client sends JSON
+      ↓
+Zod validation
+      ↓
+Valid? ── No → Return validation error
+      ↓ Yes
+Controller → Service → Database
+```
+
+Driver signup is a discriminated union by role: a `PASSENGER` may register with
+no vehicle, a `DRIVER` must supply one. Enforced with `.superRefine()` so it
+cannot be bypassed by sending the wrong role.
+
+### JWT, not server-side sessions
+
+Tokens are self-signed and verified against a shared secret, so authentication
+is stateless and needs no session store. The trade-off is that a token cannot
+be revoked before it expires — `JWT_EXPIRES_IN` defaults to 7 days.
+
+### Conditional `UPDATE` for seat capacity, not locking clauses
+
+The last seat is claimed by making the capacity check part of the write:
+
+```ts
+await tx.pool.updateMany({
+  where: { id: poolId, status: PoolStatus.OPEN,
+           availableSeats: { gte: rideRequest.seatsRequested } },
+  data: { availableSeats: { decrement: rideRequest.seatsRequested } },
+});
+if (result.count === 0) throw new AppError("Not enough seats left in this pool", 409);
+```
+
+No `SELECT ... FOR UPDATE`, no optimistic version counter, no application
+mutex. Under PostgreSQL's default `READ COMMITTED`, a blocked writer
+re-evaluates its `WHERE` against the version the winner committed, so the
+loser's predicate matches nothing and the transaction rolls back. **The check
+and the write are the same statement, so they cannot disagree** — and because
+the arbiter is the database rather than the application, this works unchanged
+across any number of instances.
+
+### No Redis, no queue, no microservices
+
+Deliberate, not deferred. State is either already in PostgreSQL or stateless
+(JWTs need no session store; `User.isOnline` is a column). There is no
+background work to decouple — `setInterval` appears zero times in the repo.
+The seams that do exist could be extracted, but splitting matching from pool
+lifecycle would put a distributed transaction in exactly the place correctness
+matters most. Reasoning in full: [`docs/architecture.md`](docs/architecture.md#3-why-there-is-no-redis-no-queue-and-no-microservices).
+
+### Fare model
+
+Base fare 30 BDT, distance charge 15 BDT/km, discount by pool occupancy:
+
+| Seats in pool | Discount |
+| --- | --- |
+| 1 | 0% |
+| 2 | 20% |
+| 3+ | 30% |
+
+Distances come from a hand-written zone-pair table rather than coordinates,
+because `Zone` carries no lat/lng. Simple and predictable for Dhaka's fixed,
+well-known zones; it would not extend to arbitrary geography.
+
+## Testing
+
+46 tests in two projects, because they are not the same kind of claim:
+
+- **`unit`** — fare arithmetic and the state-transition tables. Pure logic, no
+  database.
+- **`integration`** — seat capacity, the concurrent last-seat race, cross-user
+  access control, cancellation rules. These are database invariants, so mocking
+  Prisma would prove nothing. They run against a throwaway database on its own
+  port, and `globalSetup` refuses to start if pointed at your dev database.
 
 ```bash
 cd backend
-npm run test:db:up    # separate Postgres, own port
-npm test              # 46 tests
-npm run test:db:down  # tears it down and drops its volume
+npm run test:db:up    # start the throwaway database
+npm test              # unit + integration
+npm run test:db:down  # tear it down and drop its volume
 ```
 
-`globalSetup` refuses to start if `TEST_DATABASE_URL` and `DATABASE_URL` name
-the same database, so pointing the tests at your dev data is not something you
-can do by accident.
+The concurrency test takes a real row lock from a separate connection,
+asserts the service call stays blocked, then asserts it returns 409 after the
+lock is released — it proves the guarantee rather than assuming it.
+
+Coverage details: [`docs/testing.md`](docs/testing.md).
+
+## Known limitations
+
+Stated plainly. Two of these are real defects, not just scope.
+
+- **Two invariants are checked outside the transaction.** "One active ride per
+  passenger" and "one active pool per driver" are both read-then-write checks
+  with no database constraint behind them. Both reproduce in a **single**
+  process, because every `await` is a yield point. The fix is a partial unique
+  index — no new infrastructure, but it is a schema migration.
+- **No `CHECK` constraints.** `availableSeats >= 0`, `seatCapacity > 0` and
+  `seatsRequested > 0` are trusted to application code.
+- **Payments are simulated.** An internal wallet column; transaction IDs are
+  generated in-process. No payment gateway is integrated.
+- **No geocoding.** Distances come from a static table; `Zone` has no
+  coordinates.
+- **No live updates.** No WebSocket or SSE, so a passenger does not see their
+  ride matched without a refresh. Requests are fetched on demand.
+- **No horizontal scaling yet, though nothing blocks it.** The backend is
+  stateless, but `PrismaPg` uses `pg`'s default pool of 10 connections per
+  process against Postgres's default `max_connections = 100`, so ~9 instances
+  would exhaust the server. The fix is PgBouncer, not Redis.
+- **The frontend has no automated tests.** The backend has 46.
 
 ## Documentation
 
 | Document | What is in it |
 | --- | --- |
-| [`docs/architecture.md`](docs/architecture.md) | System diagram, the Route → Middleware → Controller → Service → Prisma layering, why there is no Redis/queue/microservice layer, concurrency model, scaling limits, known limitations |
-| [`docs/database-design.md`](docs/database-design.md) | **ERD and full schema** — the 8 tables, constraints, and why each major design choice was made |
+| [`docs/architecture.md`](docs/architecture.md) | Layering in depth, the omissions argument, concurrency model, scaling |
+| [`docs/database-design.md`](docs/database-design.md) | ERD, full schema, constraints, design notes |
 | [`docs/testing.md`](docs/testing.md) | How to run the suites and what they cover |
-| [`docs/demo.md`](docs/demo.md) | Walkthrough, demo credentials, and the video outline |
-
-## Key Decisions & Trade-offs
-
-### Money Representation
-
-`Payment.amount` is stored as `Decimal(10,2)` rather than integer
-poysha.
-
-**Why:**
-
-- Keeps monetary values readable in the database.
-- Directly represents amounts such as `250.50`.
-- simple fare model.
-
-**Alternative considered:**
-
-- Store money as integer poysha (`25050` = ৳250.50).
-
-**Trade-off:**
-
-- Decimal is more readable, but fare calculations must handle
-  decimal precision and rounding consistently.
-
-**When I would reconsider:**
-
-- For a larger financial/payment system, I would consider integer
-  minor units such as poysha to eliminate decimal arithmetic
-  concerns.
-
-### password hasing decision
-
-- bcryptjs over native bcrypt: pure JS, no node-gyp/native binary mismatch
-- risk between your host machine and the Docker container — worth the small
-- throughput cost for an MVP with no realistic login-storm scale concern.
-
-### input validation
-
--using zod
--"I receive data from outside my code → I don't trust it → Zod checks it → if valid, I use it."
-
-### jwt token generation
-
--you need vechile information for sign up as a driver(using .superRefine())
-
-              Signup
-                │
-        ┌───────┴────────┐
-        │                │
-    PASSENGER          DRIVER
-        │                │
-
-vehicle optional vehicle REQUIRED
-│
-↓
-createVehicleSchema
-
-### zod validation
-
-Client sends JSON
-↓
-Zod validation
-↓
-Valid? ── No → Return validation error
-↓ Yes
-Controller
-↓
-Service
-↓
-Database
-
-### flow
-
-Request
-↓
-Route
-↓
-Middleware
-↓
-Controller
-↓
-Service
-↓
-Prisma
-↓
-PostgreSQL
-
-### vechicle feature flow
-
-GET /vehicles/me
-↓
-authenticate
-↓
-authorize("DRIVER")
-↓
-listMine controller
-↓
-listMyVehicles service
-↓
-Prisma
-
-| Method | Endpoint        | Authentication | Role                   | Validation    | Controller |
-| ------ | --------------- | -------------- | ---------------------- | ------------- | ---------- |
-| GET    | `/vehicles/me`  | ✅             | DRIVER                 | —             | `listMine` |
-| POST   | `/vehicles`     | ✅             | DRIVER                 | Create schema | `create`   |
-| PATCH  | `/vehicles/:id` | ✅             | DRIVER                 | Update schema | `update`   |
-| GET    | `/vehicles/:id` | ✅             | Any authenticated user | —             | `getOne`   |
-
-### API ENDPOINT:
-
-## zone:
-
-1. GET /api/zones
-2. GET /api/zones/:id (public, no auth) (zones are seed only)
-
-## vehicle :
-
-1. POST /api/vehicles (create vehicle information, need authentication(token),authorization(driver), vehicle information(name, model, plateNumber, seatCapacity))
-
-2. GET /api/vehicles/me(for listing the vehicles of a driver. need: auth)
-
-3. GET /api/vehicles/:id, (driver or passenger see the vehicle information with provide vehicle id, need :auth)
-
-4. PATCH /api/vehicles/:id (update vehicle information, need : token, vehicle data, vehicle id)
-
-# Step 4 — Ride Requests
-
-## New/changed files
-
-- `src/validators/rideRequest.validator.ts` — new
-- `src/utils/estimateFare.ts` — new (placeholder fare estimator, isolated for Step 7)
-- `src/services/rideRequest.service.ts` — new
-- `src/controllers/rideRequest.controller.ts` — new
-- `src/routes/rideRequest.route.ts` — new
-- `src/index.ts` — **replaces your existing file**: added the `rideRequestRouter`
-  import + `app.use("/api/rides", rideRequestRouter)` line, updated the TODO
-  comment. Nothing else changed .
-
-Everything else (schema, auth, vehicles, zones) is untouched.
-
-## Endpoints
-
-| Method | Path                    | Auth                   | Notes                                                                                        |
-| ------ | ----------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
-| POST   | `/api/rides`            | PASSENGER              | `{ originZoneId, destinationZoneId, seatsRequested? }` (seatsRequested defaults to 1, max 3) |
-| GET    | `/api/rides/me`         | PASSENGER              | own history, newest first                                                                    |
-| GET    | `/api/rides/:id`        | PASSENGER (owner only) | 403 if you don't own it                                                                      |
-| PATCH  | `/api/rides/:id/cancel` | PASSENGER (owner only) | 409 if status isn't still `REQUESTED`                                                        |
-
-## Decisions implemented
-
-- One active (`REQUESTED`/`MATCHED`) request per passenger at a time → 409 on a second attempt.
-- `originZoneId !== destinationZoneId` enforced in the zod schema.
-- `estimateFare()` returned in the `POST /api/rides` response only — never written to `Payment`.
-- `RideStatusHistory` row written on both create and cancel.
-
-## Quick manual test (after `npm run dev`, logged in)
-
-```bash
-# get a token first via POST /api/auth/login, then:
-
-# list zones to grab ids
-curl http://localhost:3000/api/zones
-
-# create a request
-curl -X POST http://localhost:3000/api/rides \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"originZoneId":"<banani-id>","destinationZoneId":"<mohakhali-id>","seatsRequested":1}'
-
-# try creating a 2nd one -> expect 409
-
-# view own history
-curl http://localhost:3000/api/rides/me -H "Authorization: Bearer <TOKEN>"
-
-# cancel
-curl -X PATCH http://localhost:3000/api/rides/<id>/cancel -H "Authorization: Bearer <TOKEN>"
-```
-
-## step that are still pending
-
-- Driver "see relevant requests" + "accept" → Step 5, alongside `Pool` creation.
-- Real fare formula / persisted `Payment` → Step 7.
-- Any status beyond `REQUESTED`/`CANCELLED` → Step 5/6.
-
-### step-5: pool matching engine
-
-| API                       | Who       | Simple meaning                    |
-| ------------------------- | --------- | --------------------------------- |
-| `GET /rides/open`         | Driver    | **Show me passengers waiting**    |
-| `POST /rides/:id/accept`  | Driver    | **I want to take this passenger** |
-| `GET /pools/me/active`    | Driver    | **Show me my current trip/pool**  |
-| `PATCH /rides/:id/cancel` | Passenger | **I want to cancel my ride**      |
-
-### flow diagram:
-
-Passenger creates ride
-↓
-REQUESTED
-↓
-GET /api/rides/open
-↑
-Driver sees available passengers
-↓
-POST /api/rides/:id/accept
-↓
-REQUESTED → MATCHED
-↓
-Passenger joins driver's Pool
-↓
-GET /api/pools/me/active
-↓
-Driver sees:
-vehicle
-passengers
-seats
-zones
-↓
-Passenger changes mind?
-↓
-PATCH /api/rides/:id/cancel
-↓
-MATCHED → CANCELLED
-↓
-seat returned to Pool
-
-## Step 6 — Driver Flow & Pool Lifecycle
-
-Step 6 adds the driver's trip controls, online/offline status, lifecycle
-transitions, and status history for pools and ride requests.
-
-### Driver endpoints
-
-| Method | Path                      | Meaning                                |
-| ------ | ------------------------- | -------------------------------------- |
-| PATCH  | `/api/drivers/me/status`  | Go online or offline                   |
-| GET    | `/api/pools/me/active`    | View the active trip and passengers    |
-| GET    | `/api/pools/me/history`   | View completed and cancelled trips     |
-| GET    | `/api/pools/:id`          | View one owned trip and all passengers |
-| GET    | `/api/pools/:id/history`  | View the trip status timeline          |
-| POST   | `/api/pools/:id/arrive`   | Mark the driver as arrived             |
-| POST   | `/api/pools/:id/start`    | Start the trip                         |
-| POST   | `/api/pools/:id/complete` | Complete the trip                      |
-| POST   | `/api/pools/:id/cancel`   | Cancel before the trip starts          |
-
-### Passenger history endpoint
-
-| Method | Path                     | Meaning                                |
-| ------ | ------------------------ | -------------------------------------- |
-| GET    | `/api/rides/:id/history` | View the passenger's own ride timeline |
-
-### Lifecycle rules
-
-- Pool: `OPEN → DRIVER_ARRIVED → STARTED → COMPLETED`
-- Pool cancellation is allowed from `OPEN` or `DRIVER_ARRIVED`.
-- Ride: `REQUESTED → MATCHED → DRIVER_ARRIVED → STARTED → COMPLETED`
-- Passengers may cancel before `STARTED`.
-- Driver actions update the pool and all active passengers in one transaction.
-- Only online drivers can accept ride requests, and drivers cannot go offline during an active trip.
-
-### Step 6 validation
-
-## Step 7 — Fare Calculation & Payment System
-
-Step 7 adds the real pricing engine and payment flow for Dhaka Tesla Pool. It replaces the placeholder fare helper with a zone-aware calculation that applies pooled seat discounts and persists the money logic in the application service layer.
-
-### What was added
-
-- `backend/src/config/fareConfig.ts` — fare constants and zone distance map
-- `backend/src/utils/estimateFare.ts` — real fare calculation logic with proper discount tiers
-- `backend/src/controllers/payment.controller.ts` — wallet, top-up, estimation, and cash collection endpoints
-- `backend/src/services/payment.service.ts` — wallet balance logic and payment retrieval logic
-- `backend/src/routes/payment.route.ts` — payment routes mounted to the API
-- `backend/src/validators/payment.validator.ts` — validation for wallet and fare estimation payloads
-- `backend/tests/fareCalculation.test.ts` — unit checks for the PRD fare examples
-
-### Payment endpoints
-
-| Method | Path                                | Auth                | Meaning                         |
-| ------ | ----------------------------------- | ------------------- | ------------------------------- |
-| GET    | `/api/wallet`                       | Authenticated user  | View wallet balance             |
-| POST   | `/api/wallet/topup`                 | Authenticated user  | Add value to wallet             |
-| POST   | `/api/fares/estimate`               | Authenticated user  | Estimate solo vs pooled fare    |
-| POST   | `/api/payments/:paymentId/collect`  | Driver              | Mark cash payment as collected  |
-| GET    | `/api/payments/ride/:rideRequestId` | Passenger or driver | View payment details for a ride |
-
-### Business rules
-
-- Base fare is `30` BDT and distance charge is `15` BDT per km
-- Discount is applied based on occupied seats in the pool:
-  - 1 seat: `0%`
-  - 2 seats: `20%`
-  - 3+ seats: `30%`
-- Calculations are done in poysha first, then converted to a decimal-friendly BDT representation for storage
-- The main app now mounts the payment router in `backend/src/index.ts`
-
-### Manual verification
-
-```bash
-cd backend
-npm test -- --run tests/fareCalculation.test.ts
-```
-
-This confirms the Step 7 fare examples match the PRD expectations for Banani → Mohakhali and Banani → Gulshan 1 scenarios.
-
-```bash
-npm test
-```
-
-### api endpoint summary table for step-06
-
-| Method  | Endpoint                  | Who       | Purpose                   |
-| ------- | ------------------------- | --------- | ------------------------- |
-| `PATCH` | `/api/drivers/me/status`  | Driver    | Go **online/offline**     |
-| `GET`   | `/api/pools/active`       | Driver    | Get driver's active pool  |
-| `GET`   | `/api/pools/:id`          | Driver    | Get pool details          |
-| `GET`   | `/api/pools/history`      | Driver    | Get driver's pool history |
-| `GET`   | `/api/pools/:id/timeline` | Driver    | Get pool/ride timeline    |
-| `POST`  | `/api/pools/:id/arrive`   | Driver    | Mark driver as arrived    |
-| `POST`  | `/api/pools/:id/start`    | Driver    | Start the trip            |
-| `POST`  | `/api/pools/:id/complete` | Driver    | Complete the trip         |
-| `POST`  | `/api/pools/:id/cancel`   | Driver    | Cancel the pool/trip      |
-| `GET`   | `/api/rides/:id/history`  | Passenger | Get ride request history  |
-
-### Step 8 (in progress) — test suite
-
-See **[docs/testing.md](docs/testing.md)** for the full write-up: how to run
-the suites, what each PRD §12 requirement is covered by, and how the
-concurrency test proves the last-seat race is handled.
-
-The suite is split in two, because the requirements are not the same kind of
-claim:
-
-- **`unit`** — fare arithmetic and the state-transition tables. Pure logic, no
-  database, runs anywhere.
-- **`integration`** — seat capacity, the concurrent seat-claim race,
-  cross-user access control and cancellation rules. These are database
-  invariants: the guarantee lives in PostgreSQL's row locking, so mocking
-  Prisma would prove nothing. They run against a throwaway database in
-  `docker-compose.test.yml` on its own port, and `globalSetup` refuses to run
-  if it is pointed at your development database.
-
-```bash
-cd backend
-npm run test:db:up    # start the throwaway database on :5434
-npm test              # unit + integration
-```
-
-### Slice 7 — frontend polish
-
-Loading, empty and error states are consistent across all three panels, and
-every state the app can be in has been walked through with the seeded cast.
-
-Fixes this slice made, rather than only adding states:
-
-- **`Failed to fetch` is no longer shown to users.** `fetch` was awaited with
-  no timeout and no network handling, so a backend that was simply not running
-  surfaced a raw browser string — and a request that connected and then went
-  silent left the panel spinning forever. `ApiError` now distinguishes "the
-  server said no" from "we never reached the server", and every request has a
-  12-second timeout.
-- **A completed trip used to show no fare at all.** `PassengerPaymentCard`
-  initialised `isLoading` to `false` and never set it back to `true`, so its
-  loading branch was unreachable and the fare row rendered blank while the
-  request was still in flight.
-- **Trip history showed the wrong trip's error.** One unkeyed error string was
-  shared across all expanded trips, so a failure on trip A appeared under trip
-  B.
-- **The wallet no longer vanishes.** A failed wallet load rendered `null`,
-  leaving TeslaPay offered with no explanation and no retry. It now shows what
-  failed, offers a retry, and disables TeslaPay so the form is never left on a
-  payment method known not to work.
-- **Keyboard support for the accept dialog**: Escape closes, focus moves in,
-  Tab is trapped, and focus returns to the card that opened it.
-- **Drivers going online with no Tesla** are told up front, instead of
-  discovering it through an Accept button that can only fail.
-
-### Demo
-
-**[docs/demo.md](docs/demo.md)** — demo credentials, a 13-step walkthrough of
-the story, the exact fares each passenger is charged, the screenshot list, and
-the 6-minute video outline.
-
-| Person | Phone         | Password           | Role            |
-| ------ | ------------- | ------------------ | --------------- |
-| Jashim | `01700000001` | `DhakaPoolDemo123!` | Driver (Bullet) |
-| Nusrat | `01700000002` | `DhakaPoolDemo123!` | Passenger       |
-| Rafiq  | `01700000003` | `DhakaPoolDemo123!` | Passenger       |
-| Shirin | `01700000004` | `DhakaPoolDemo123!` | Passenger       |
-
-
+| [`docs/demo.md`](docs/demo.md) | Demo credentials, walkthrough, fares, video outline |
+| [`docs/build-log.md`](docs/build-log.md) | Step-by-step record of how it was built |
