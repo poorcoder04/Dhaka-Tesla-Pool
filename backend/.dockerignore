@@ -1,3 +1,32 @@
+# Dependencies and build output are produced inside the image, not copied in.
 node_modules
 .next
+dist
+out
+
+# Secrets must never enter an image. Values are supplied at runtime through
+# docker-compose's `environment:` block or the host platform's secret store.
+# Without this, `COPY . .` bakes the developer's .env — JWT_SECRET included —
+# into the image, and `docker history` / `docker save` hand it to anyone with
+# the image.
+.env
+.env.*
+!.env.example
+
+# Tests and coverage reports are not needed to run the service.
+coverage
+tests
+vitest.config.ts
+vitest.unit.config.ts
+vitest.integration.config.ts
+docker-compose*.yml
+README.md
+
+# Tooling and VCS metadata.
 .git
+.gitignore
+.vscode
+.idea
+npm-debug.log*
+Dockerfile
+.dockerignore

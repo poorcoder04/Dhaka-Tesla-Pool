@@ -1,3 +1,21 @@
+# Dependencies and build output are produced inside the image, not copied in.
 node_modules
 .next
+out
+
+# Secrets must never enter an image. NEXT_PUBLIC_* are not secrets, but the
+# value is supplied as a build argument (see Dockerfile), not from a local
+# .env that would differ from the deployed environment.
+.env
+.env.*
+!.env.example
+
+# Tooling and VCS metadata.
 .git
+.gitignore
+.vscode
+.idea
+npm-debug.log*
+Dockerfile
+.dockerignore
+next.config.ts.bak
