@@ -45,9 +45,9 @@ services:
     branch: master
     region: oregon
     healthCheckPath: /health
-    # The backend already handles SIGTERM by closing the Prisma connection
-    # pool before exiting (see src/index.ts), so the default 30s is ample.
-    maxShutdownDelaySeconds: 30
+    # maxShutdownDelaySeconds is deliberately absent: Render rejects it on free
+    # tier, and the default 30s is plenty anyway. The backend handles SIGTERM by
+    # closing the Prisma pool before exiting, which takes milliseconds.
     envVars:
       - key: NODE_ENV
         value: production
@@ -86,7 +86,7 @@ services:
     branch: master
     region: oregon
     healthCheckPath: /
-    maxShutdownDelaySeconds: 30
+    # Same as the API service: free tier does not allow maxShutdownDelaySeconds.
     envVars:
       # Read at BUILD time, not runtime. Render passes this to the image
       # build as a build argument, so `next build` freezes the backend URL
